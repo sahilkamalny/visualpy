@@ -1,0 +1,12 @@
+/* VisualPy Webview Styles */
+/* Main styles are embedded in BlockEditorProvider.ts */
+/* This file can be used for external stylesheet builds */
+
+:root {
+    --vp-bg-primary: var(--vscode-editor-background);
+    --vp-bg-secondary: var(--vscode-sideBar-background);
+    --vp-text-primary: var(--vscode-editor-foreground);
+    --vp-text-secondary: var(--vscode-descriptionForeground);
+    --vp-border: var(--vscode-editorWidget-border);
+    --vp-focus: var(--vscode-focusBorder);
+}

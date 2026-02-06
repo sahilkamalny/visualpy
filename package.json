@@ -1,0 +1,144 @@
+{
+  "name": "visualpy",
+  "displayName": "VisualPy",
+  "description": "Convert Python code to Scratch-like visual blocks and back - a bidirectional visual programming experience",
+  "version": "0.1.0",
+  "publisher": "visualpy",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization",
+    "Education"
+  ],
+  "keywords": [
+    "python",
+    "visual programming",
+    "blocks",
+    "scratch",
+    "education"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "visualpy.openBlockEditor",
+        "title": "Open Block Editor",
+        "category": "VisualPy",
+        "icon": "$(symbol-misc)"
+      },
+      {
+        "command": "visualpy.syncCodeToBlocks",
+        "title": "Sync: Code → Blocks",
+        "category": "VisualPy"
+      },
+      {
+        "command": "visualpy.syncBlocksToCode",
+        "title": "Sync: Blocks → Code",
+        "category": "VisualPy"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "visualpy.openBlockEditor",
+          "when": "resourceLangId == python",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "visualpy.openBlockEditor",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b",
+        "when": "resourceLangId == python"
+      }
+    ],
+    "configuration": {
+      "title": "VisualPy",
+      "properties": {
+        "visualpy.syncMode": {
+          "type": "string",
+          "default": "onSave",
+          "enum": ["manual", "onSave", "realtime"],
+          "enumDescriptions": [
+            "Sync only when manually triggered",
+            "Sync automatically when the file is saved",
+            "Sync in real-time as you type (may affect performance)"
+          ],
+          "description": "When to synchronize between code and blocks"
+        },
+        "visualpy.indentSize": {
+          "type": "number",
+          "default": 4,
+          "description": "Number of spaces for indentation in generated code"
+        },
+        "visualpy.indentStyle": {
+          "type": "string",
+          "default": "spaces",
+          "enum": ["spaces", "tabs"],
+          "description": "Use spaces or tabs for indentation"
+        },
+        "visualpy.defaultZoom": {
+          "type": "number",
+          "default": 100,
+          "minimum": 50,
+          "maximum": 200,
+          "description": "Default zoom level for the block canvas (50-200%)"
+        },
+        "visualpy.showMinimap": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show minimap in the block canvas"
+        },
+        "visualpy.palettePosition": {
+          "type": "string",
+          "default": "left",
+          "enum": ["left", "right", "hidden"],
+          "description": "Position of the block palette"
+        },
+        "visualpy.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Python executable (auto-detected if empty)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "dev": "webpack --mode development",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.70.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "copy-webpack-plugin": "^11.0.0",
+    "@vscode/vsce": "^2.21.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visualpy/visualpy"
+  },
+  "icon": "resources/icons/extension.png",
+  "galleryBanner": {
+    "color": "#3B82F6",
+    "theme": "dark"
+  }
+}
