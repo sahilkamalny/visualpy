@@ -1373,6 +1373,27 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                  }
             };
 
+            // --- MESSAGE HANDLER ---
+            window.addEventListener('message', event => {
+                const message = event.data;
+                switch (message.type) {
+                    case 'INIT':
+                        blocks = message.payload.blocks || [];
+                        config = message.payload.config || {}; // Update config
+                        renderBlocks();
+                        updateSyncStatus('synced');
+                        break;
+                    case 'UPDATE_BLOCKS':
+                        blocks = message.payload.blocks || [];
+                        renderBlocks();
+                        updateSyncStatus('synced');
+                        break;
+                    case 'SYNC_STATUS':
+                        updateSyncStatus(message.payload.status);
+                        break;
+                }
+            });
+
             vscode.postMessage({ type: 'READY' });
 
         })();
