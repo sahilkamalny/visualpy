@@ -23,7 +23,7 @@ export function astToBlocks(parseResult: ParseResult): Block[] {
     }
 
     // Process each body statement
-    blocks.push(...processBodyWithComments(module.body, commentsByLine));
+    blocks.push(...processBodyWithComments(module.body, commentsByLine, 0));
 
     return blocks;
 }
@@ -41,8 +41,17 @@ function processBodyWithComments(
 ): Block[] {
     const blocks: Block[] = [];
 
-    // Start checking from the line after the initial start line, or line 1 (represented by lastEndLine=0)
-    let lastEndLine = initialStartLine !== undefined ? initialStartLine : 0;
+    // If initialStartLine is provided, use it.
+    // If not, and we have nodes, infer start from the first node (local scope).
+    // Otherwise (no nodes, no start line), default to 0 (start of file/empty block).
+    let lastEndLine: number;
+    if (initialStartLine !== undefined) {
+        lastEndLine = initialStartLine;
+    } else if (nodes.length > 0 && nodes[0].lineno) {
+        lastEndLine = nodes[0].lineno - 1;
+    } else {
+        lastEndLine = 0;
+    }
 
     for (const node of nodes) {
         const nodeLine = node.lineno || 1;
