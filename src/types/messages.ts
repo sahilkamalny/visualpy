@@ -30,7 +30,7 @@ export type ExtensionMessage =
 export type WebviewMessage =
     | { type: 'READY' }
     | { type: 'BLOCKS_CHANGED'; payload: { blocks: Block[] } }
-    | { type: 'REQUEST_SYNC'; payload: { direction: 'toCode' | 'toBlocks' } }
+    | { type: 'REQUEST_SYNC'; payload: { direction: 'toCode' | 'toBlocks'; blocks?: Block[] } }
     | { type: 'BLOCK_SELECTED'; payload: { blockId: string; sourceRange: { startLine: number; endLine: number } } }
     | { type: 'REQUEST_PARSE' }
     | { type: 'LOG'; payload: { level: 'info' | 'warn' | 'error'; message: string } }

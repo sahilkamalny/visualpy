@@ -1,0 +1,9 @@
+src/test/suite/blocksToCode.test.ts(169,28): error TS2739: Type '{ text: string; inline: false; }' is missing the following properties from type 'Comment': line, column
+src/test/suite/index.ts(7,23): error TS2351: This expression is not constructable.
+  Type 'typeof Mocha' has no construct signatures.
+src/test/suite/index.ts(16,9): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Projects/GitHub/VisualPy/node_modules/glob/dist/commonjs/index")' has no call signatures.
+src/test/suite/index.ts(16,52): error TS7006: Parameter 'err' implicitly has an 'any' type.
+src/test/suite/index.ts(16,57): error TS7006: Parameter 'files' implicitly has an 'any' type.
+src/test/suite/index.ts(22,27): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/test/suite/index.ts(26,27): error TS7006: Parameter 'failures' implicitly has an 'any' type.

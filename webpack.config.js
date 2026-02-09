@@ -21,7 +21,7 @@ const extensionConfig = {
         rules: [
             {
                 test: /\.ts$/,
-                exclude: /node_modules/,
+                exclude: [/node_modules/, /src\/test/],
                 use: [
                     {
                         loader: 'ts-loader'
@@ -44,39 +44,7 @@ const extensionConfig = {
     }
 };
 
-/** @type {import('webpack').Configuration} */
-const webviewConfig = {
-    target: 'web',
-    mode: 'none',
-    entry: './webview/src/main.ts',
-    output: {
-        path: path.resolve(__dirname, 'webview/dist'),
-        filename: 'webview.js'
-    },
-    resolve: {
-        extensions: ['.ts', '.js']
-    },
-    module: {
-        rules: [
-            {
-                test: /\.ts$/,
-                exclude: /node_modules/,
-                use: [
-                    {
-                        loader: 'ts-loader',
-                        options: {
-                            configFile: path.resolve(__dirname, 'webview/tsconfig.json')
-                        }
-                    }
-                ]
-            },
-            {
-                test: /\.css$/,
-                use: ['style-loader', 'css-loader']
-            }
-        ]
-    },
-    devtool: 'source-map'
-};
+// Note: Webview HTML is embedded in BlockEditorProvider.ts
+// so a separate webview build is not needed
 
-module.exports = [extensionConfig, webviewConfig];
+module.exports = extensionConfig;

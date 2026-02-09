@@ -65,7 +65,11 @@
         "visualpy.syncMode": {
           "type": "string",
           "default": "onSave",
-          "enum": ["manual", "onSave", "realtime"],
+          "enum": [
+            "manual",
+            "onSave",
+            "realtime"
+          ],
           "enumDescriptions": [
             "Sync only when manually triggered",
             "Sync automatically when the file is saved",
@@ -81,7 +85,10 @@
         "visualpy.indentStyle": {
           "type": "string",
           "default": "spaces",
-          "enum": ["spaces", "tabs"],
+          "enum": [
+            "spaces",
+            "tabs"
+          ],
           "description": "Use spaces or tabs for indentation"
         },
         "visualpy.defaultZoom": {
@@ -99,7 +106,11 @@
         "visualpy.palettePosition": {
           "type": "string",
           "default": "left",
-          "enum": ["left", "right", "hidden"],
+          "enum": [
+            "left",
+            "right",
+            "hidden"
+          ],
           "description": "Position of the block palette"
         },
         "visualpy.pythonPath": {
@@ -120,17 +131,22 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^18.x",
     "@types/vscode": "^1.70.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^2.21.0",
+    "copy-webpack-plugin": "^11.0.0",
     "eslint": "^8.45.0",
+    "glob": "^10.0.0",
+    "mocha": "^10.2.0",
     "ts-loader": "^9.4.4",
     "typescript": "^5.1.6",
     "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "copy-webpack-plugin": "^11.0.0",
-    "@vscode/vsce": "^2.21.0"
+    "webpack-cli": "^5.1.4"
   },
   "repository": {
     "type": "git",
