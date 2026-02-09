@@ -1,6 +1,6 @@
 import { ASTNode, ASTModule, ParseResult, CommentInfo } from '../types/ast';
 import { Block, BlockType, BlockCategory, BLOCK_TYPE_CATEGORY } from '../types/blocks';
-import { generateId } from '../utils/config';
+import { generateId } from '../utils/id';
 
 /**
  * Convert AST to Block tree
@@ -23,16 +23,39 @@ export function astToBlocks(parseResult: ParseResult): Block[] {
     }
 
     // Process each body statement
-    let lastEndLine = 0;
-    for (const node of module.body) {
-        // Add standalone comments before this node
+    blocks.push(...processBodyWithComments(module.body, commentsByLine));
+
+    return blocks;
+}
+
+/**
+ * Process a list of body nodes and insert comments where appropriate
+ */
+/**
+ * Process a list of body nodes and insert comments where appropriate
+ */
+function processBodyWithComments(
+    nodes: ASTNode[],
+    commentsByLine: Map<number, CommentInfo[]>,
+    initialStartLine?: number
+): Block[] {
+    const blocks: Block[] = [];
+
+    // Start checking from the line after the initial start line, or line 1 (represented by lastEndLine=0)
+    let lastEndLine = initialStartLine !== undefined ? initialStartLine : 0;
+
+    for (const node of nodes) {
         const nodeLine = node.lineno || 1;
-        for (let line = lastEndLine + 1; line < nodeLine; line++) {
-            const lineComments = commentsByLine.get(line);
-            if (lineComments) {
-                for (const comment of lineComments) {
-                    if (!comment.inline) {
-                        blocks.push(createCommentBlock(comment));
+
+        // Add standalone comments appearing before this node
+        if (nodeLine > lastEndLine) {
+            for (let line = lastEndLine + 1; line < nodeLine; line++) {
+                const lineComments = commentsByLine.get(line);
+                if (lineComments) {
+                    for (const comment of lineComments) {
+                        if (!comment.inline) {
+                            blocks.push(createCommentBlock(comment));
+                        }
                     }
                 }
             }
@@ -42,7 +65,31 @@ export function astToBlocks(parseResult: ParseResult): Block[] {
         if (block) {
             blocks.push(block);
         }
-        lastEndLine = node.end_lineno || nodeLine;
+        lastEndLine = Math.max(lastEndLine, node.end_lineno || nodeLine);
+    }
+
+    // If this is the top-level (initialStartLine undefined) or explicit request, 
+    // and we have remaining comments (e.g. file ends with comments, or file is ONLY comments),
+    // we should try to include them.
+    // Since we don't know the exact end of file here, we can heuristically check 
+    // if there are more comments in the map greater than lastEndLine.
+    // However, for nested blocks, grabbing "everything after" is dangerous as it might belong to outer scope.
+    // But for the CASE where nodes is empty (e.g. empty file with comments), we MUST process them.
+    if (nodes.length === 0 && initialStartLine === undefined) {
+        // Scan all comments since we have no nodes to bound them
+        const sortedLines = Array.from(commentsByLine.keys()).sort((a, b) => a - b);
+        for (const line of sortedLines) {
+            if (line > lastEndLine) {
+                const lineComments = commentsByLine.get(line);
+                if (lineComments) {
+                    for (const comment of lineComments) {
+                        if (!comment.inline) {
+                            blocks.push(createCommentBlock(comment));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return blocks;
@@ -308,13 +355,7 @@ function createFunctionBlock(
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     return block;
 }
@@ -336,13 +377,7 @@ function createClassBlock(
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     return block;
 }
@@ -360,13 +395,7 @@ function createIfBlock(
     ];
 
     // Process if body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     // Process elif/else (orelse)
     block.attachments = [];
@@ -396,13 +425,7 @@ function createElifBlock(node: ASTNode, comments: Map<number, CommentInfo[]>): B
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     // Process further elif/else
     block.attachments = [];
@@ -442,15 +465,8 @@ function createElseBlock(
             comments: [],
             collapsed: false
         },
-        children: []
+        children: processBodyWithComments(body, comments)
     };
-
-    for (const bodyNode of body) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children!.push(childBlock);
-        }
-    }
 
     return block;
 }
@@ -472,13 +488,7 @@ function createForBlock(
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     // Process else
     block.attachments = [];
@@ -504,13 +514,7 @@ function createWhileBlock(
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     // Process else
     block.attachments = [];
@@ -531,13 +535,7 @@ function createTryBlock(
     const block = createBlock('try', 'try:', node, nodeComments);
 
     // Process try body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     // Process except handlers
     block.attachments = [];
@@ -598,15 +596,8 @@ function createExceptBlock(handler: any, comments: Map<number, CommentInfo[]>): 
             comments: nodeComments,
             collapsed: false
         },
-        children: []
+        children: processBodyWithComments(handler.body || [], comments, handler.lineno)
     };
-
-    for (const bodyNode of (handler.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children!.push(childBlock);
-        }
-    }
 
     return block;
 }
@@ -634,15 +625,8 @@ function createFinallyBlock(
             comments: [],
             collapsed: false
         },
-        children: []
+        children: processBodyWithComments(body, comments)
     };
-
-    for (const bodyNode of body) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children!.push(childBlock);
-        }
-    }
 
     return block;
 }
@@ -666,13 +650,7 @@ function createWithBlock(
     ];
 
     // Process body
-    block.children = [];
-    for (const bodyNode of (node.body || [])) {
-        const childBlock = nodeToBlock(bodyNode, comments);
-        if (childBlock) {
-            block.children.push(childBlock);
-        }
-    }
+    block.children = processBodyWithComments(node.body || [], comments, node.lineno || undefined);
 
     return block;
 }

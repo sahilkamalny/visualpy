@@ -49,9 +49,4 @@ export async function getPythonPath(): Promise<string> {
     return process.platform === 'win32' ? 'python' : 'python3';
 }
 
-/**
- * Generate a unique ID
- */
-export function generateId(): string {
-    return `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+

@@ -901,6 +901,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                     case 'if': return 'if ' + (getBlockFieldValue(block, 'condition') || '');
                     case 'for': return 'for ' + (getBlockFieldValue(block, 'target') || '');
                     case 'while': return 'while ' + (getBlockFieldValue(block, 'condition') || '');
+                    case 'comment': return (getBlockFieldValue(block, 'text') || 'Comment').substring(0, 30) + (getBlockFieldValue(block, 'text')?.length > 30 ? '...' : '');
+                    case 'expression': return (getBlockFieldValue(block, 'expression') || 'Code').substring(0, 30) + (getBlockFieldValue(block, 'expression')?.length > 30 ? '...' : '');
                     default: return block.type;
                 }
             }
@@ -921,7 +923,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                     while: { editable: [{ id: 'condition', label: 'Condition', value: 'True' }], children: [] },
                     class: { editable: [{ id: 'name', label: 'Name', value: 'MyClass' }, { id: 'bases', label: 'Bases', value: '' }], children: [] },
                     comment: { editable: [{ id: 'text', label: 'Comment', value: 'Comment here' }] },
-                    expression: { editable: [{ id: 'expression', label: 'Expression', value: 'print("Hello")' }] },
+                    expression: { editable: [{ id: 'expression', label: 'Code', value: 'print("Hello")' }] },
                     return: { editable: [{ id: 'value', label: 'Value', value: '' }] }
                 };
                 
