@@ -1,10 +1,14 @@
 /**
- * Webview entry point
- * This file is bundled separately for the webview context
+ * Webview entry point.
+ * Mounts the Svelte app and imports global styles.
  */
+import './styles/global.css';
+import { mount } from 'svelte';
+import App from './App.svelte';
 
-// The main webview code is embedded inline in BlockEditorProvider.ts
-// This file exists for consistency with the project structure
-// and can be used for more complex webview builds in the future
+// Mount the Svelte application
+const app = mount(App, {
+    target: document.getElementById('app')!,
+});
 
-console.log('VisualPy webview initialized');
+export default app;

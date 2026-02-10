@@ -1,0 +1,174 @@
+/* VisualPy Block Editor — Global Styles
+ * Integrates with VS Code theme tokens for native look & feel.
+ * Uses CSS custom properties for block colors and state.
+ */
+
+/* === Reset & Base === */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    /* VS Code theme integration */
+    --vp-bg: var(--vscode-editor-background, #1e1e1e);
+    --vp-fg: var(--vscode-editor-foreground, #cccccc);
+    --vp-border: var(--vscode-panel-border, #2d2d2d);
+    --vp-focus: var(--vscode-focusBorder, #3B82F6);
+    --vp-hover: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+    --vp-active: var(--vscode-list-activeSelectionBackground, #094771);
+    --vp-input-bg: var(--vscode-input-background, #3c3c3c);
+    --vp-input-fg: var(--vscode-input-foreground, #cccccc);
+    --vp-input-border: var(--vscode-input-border, #3c3c3c);
+    --vp-button-bg: var(--vscode-button-background, #0e639c);
+    --vp-button-fg: var(--vscode-button-foreground, #ffffff);
+    --vp-button-hover: var(--vscode-button-hoverBackground, #1177bb);
+    --vp-badge-bg: var(--vscode-badge-background, #4d4d4d);
+    --vp-badge-fg: var(--vscode-badge-foreground, #ffffff);
+    --vp-font: var(--vscode-font-family, 'Segoe UI', system-ui, sans-serif);
+    --vp-font-size: var(--vscode-font-size, 13px);
+    --vp-mono: var(--vscode-editor-font-family, 'Cascadia Code', 'Consolas', monospace);
+    --vp-mono-size: var(--vscode-editor-font-size, 13px);
+
+    /* Custom tokens */
+    --vp-radius: 10px;
+    --vp-radius-sm: 6px;
+    --vp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --vp-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+    --vp-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.35);
+    --vp-transition: 200ms cubic-bezier(0.2, 0, 0, 1);
+    --vp-transition-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--vp-bg);
+    color: var(--vp-fg);
+    font-family: var(--vp-font);
+    font-size: var(--vp-font-size);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Scrollbar Styling === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* === Animations === */
+@keyframes vp-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes vp-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes vp-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes vp-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes vp-shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+/* === Block Color Variables (set per-block via style attribute) === */
+/* These come from the BLOCK_COLORS map */
+
+/* === Ghost Drag Styles === */
+.vp-drag-ghost {
+    filter: saturate(1.1);
+}
+
+.vp-drag-ghost .ghost-clone {
+    border: 2px solid var(--vp-focus);
+}
+
+/* === Drop Indicator === */
+.vp-drop-indicator {
+    animation: vp-pulse 1.2s ease-in-out infinite;
+}
+
+/* === Utility Classes === */
+.vp-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* === Selection prevention during drag === */
+body.is-dragging {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grabbing !important;
+}
+
+body.is-dragging * {
+    cursor: grabbing !important;
+}
