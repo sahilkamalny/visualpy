@@ -736,6 +736,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
 <body>
     <div id="app" role="application" aria-label="VisualPy Block Editor">
         <div class="toolbar" role="toolbar" aria-label="Block editor toolbar">
+            <span class="toolbar-title" id="file-name">No file open</span>
+            <div style="width: 1px; height: 20px; background: var(--vp-border); margin: 0 4px;" aria-hidden="true"></div>
             <button class="toolbar-button" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo">
                 ↶
             </button>
@@ -756,13 +758,13 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 💾 Save to Code
             </button>
             <div class="sync-indicator synced" id="sync-status" role="status" aria-live="polite">
-                <span aria-hidden="true">●</span>
+                <span aria-hidden="true">↻</span>
                 <span>Synced</span>
             </div>
             <div class="zoom-controls" role="group" aria-label="Zoom controls">
-                <button class="toolbar-button" id="btn-zoom-out" title="Zoom Out" aria-label="Zoom out">−</button>
+                <button class="toolbar-button" id="btn-zoom-out" title="Zoom Out (-)" aria-label="Zoom out">−</button>
                 <span class="zoom-display" id="zoom-display" aria-live="polite">100%</span>
-                <button class="toolbar-button" id="btn-zoom-in" title="Zoom In" aria-label="Zoom in">+</button>
+                <button class="toolbar-button" id="btn-zoom-in" title="Zoom In (+)" aria-label="Zoom in">+</button>
                 <button class="toolbar-button" id="btn-zoom-reset" title="Reset Zoom" aria-label="Reset zoom">⊡</button>
             </div>
             <div class="toolbar-spacer"></div>
@@ -775,7 +777,6 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             <button class="toolbar-button" id="btn-delete" title="Delete Selected (Del)" aria-label="Delete selected block">
                 🗑️
             </button>
-            <span class="toolbar-title" id="file-name">No file open</span>
         </div>
         <div class="main-container">
             <div class="palette" id="palette" role="region" aria-label="Block palette">
@@ -1352,8 +1353,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                  const el = document.getElementById('sync-status');
                 if(el) {
                     el.className = 'sync-indicator ' + (status === 'syncing' ? 'pending' : status);
-                    const text = { synced: 'Synced', pending: 'Pending', error: 'Error', syncing: 'Syncing...' }[status] || status;
-                    el.innerHTML = \`<span>●</span><span>\${text}</span>\`;
+                    const text = { synced: 'Synced', pending: 'Syncing...', error: 'Error', syncing: 'Syncing...' }[status] || status;
+                    el.innerHTML = \`<span>↻</span><span>\${text}</span>\`;
                  }
             }
 
@@ -1380,6 +1381,76 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             // Refresh removed
             document.getElementById('btn-undo').onclick = () => { const s = history.undo(); if(s) { blocks=s; renderBlocks(); notifyBlocksChanged(); } };
             document.getElementById('btn-redo').onclick = () => { const s = history.redo(); if(s) { blocks=s; renderBlocks(); notifyBlocksChanged(); } };
+
+            // --- ZOOM CONTROLS ---
+            function applyZoom(level) {
+                zoomLevel = Math.max(50, Math.min(200, level));
+                const canvas = document.getElementById('canvas');
+                if (canvas) {
+                    canvas.style.transform = 'scale(' + (zoomLevel / 100) + ')';
+                    canvas.style.transformOrigin = 'top left';
+                }
+                const display = document.getElementById('zoom-display');
+                if (display) display.textContent = zoomLevel + '%';
+            }
+
+            document.getElementById('btn-zoom-in').onclick = () => applyZoom(zoomLevel + 10);
+            document.getElementById('btn-zoom-out').onclick = () => applyZoom(zoomLevel - 10);
+            document.getElementById('btn-zoom-reset').onclick = () => applyZoom(100);
+
+            // --- DELETE BUTTON ---
+            document.getElementById('btn-delete').onclick = () => {
+                if (selectedBlockId) {
+                    saveState();
+                    function remove(list) {
+                        const idx = list.findIndex(b => b.id === selectedBlockId);
+                        if (idx !== -1) { list.splice(idx, 1); return true; }
+                        for (const i of list) { if (i.children && remove(i.children)) return true; if (i.attachments && remove(i.attachments)) return true; }
+                        return false;
+                    }
+                    remove(blocks);
+                    selectedBlockId = null;
+                    renderBlocks();
+                    notifyBlocksChanged();
+                }
+            };
+
+            // --- KEYBOARD SHORTCUTS ---
+            document.addEventListener('keydown', (e) => {
+                // Don't intercept shortcuts when typing in an input field
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    const s = history.undo();
+                    if (s) { blocks = s; renderBlocks(); notifyBlocksChanged(); }
+                } else if (e.ctrlKey && e.key === 'y') {
+                    e.preventDefault();
+                    const s = history.redo();
+                    if (s) { blocks = s; renderBlocks(); notifyBlocksChanged(); }
+                } else if (e.key === 'Delete') {
+                    e.preventDefault();
+                    if (selectedBlockId) {
+                        saveState();
+                        function removeBlock(list) {
+                            const idx = list.findIndex(b => b.id === selectedBlockId);
+                            if (idx !== -1) { list.splice(idx, 1); return true; }
+                            for (const i of list) { if (i.children && removeBlock(i.children)) return true; if (i.attachments && removeBlock(i.attachments)) return true; }
+                            return false;
+                        }
+                        removeBlock(blocks);
+                        selectedBlockId = null;
+                        renderBlocks();
+                        notifyBlocksChanged();
+                    }
+                } else if (e.key === '+' || e.key === '=') {
+                    e.preventDefault();
+                    applyZoom(zoomLevel + 10);
+                } else if (e.key === '-') {
+                    e.preventDefault();
+                    applyZoom(zoomLevel - 10);
+                }
+            });
             
             
             let clipboardBlock = null;
@@ -1467,11 +1538,19 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                     case 'INIT':
                         blocks = message.payload.blocks || [];
                         config = message.payload.config || {}; // Update config
+                        if (message.payload.fileName) {
+                            const fnEl = document.getElementById('file-name');
+                            if (fnEl) fnEl.textContent = message.payload.fileName;
+                        }
                         renderBlocks();
                         updateSyncStatus('synced');
                         break;
                     case 'UPDATE_BLOCKS':
                         blocks = message.payload.blocks || [];
+                        if (message.payload.fileName) {
+                            const fnEl = document.getElementById('file-name');
+                            if (fnEl) fnEl.textContent = message.payload.fileName;
+                        }
                         renderBlocks();
                         updateSyncStatus('synced');
                         break;
