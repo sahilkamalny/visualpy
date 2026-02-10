@@ -677,6 +677,60 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         .block.search-match {
             box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4);
         }
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 8px;
+            font-size: 12px;
+            color: var(--vp-text-secondary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--vp-border);
+            transition: .4s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--vp-focus);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(14px);
+        }
     </style>
 </head>
 <body>
@@ -688,6 +742,14 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             <button class="toolbar-button" id="btn-redo" title="Redo (Ctrl+Y)" aria-label="Redo">
                 ↷
             </button>
+            <!-- Auto Save Toggle -->
+            <div class="toggle-container" title="Automatically save changes to Python code">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-auto-save" checked>
+                    <span class="slider"></span>
+                </label>
+                <span>Auto Save</span>
+            </div>
             <div style="width: 1px; height: 20px; background: var(--vp-border); margin: 0 4px;" aria-hidden="true"></div>
             <!-- Refresh button removed as auto-sync is active -->
             <button class="toolbar-button primary" id="btn-sync" title="Save Blocks to Code" aria-label="Save to Code">
@@ -845,7 +907,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 ],
                 functions: [
                     { type: 'function', name: 'Function', icon: '⚡' },
-                    { type: 'return', name: 'Return', icon: '↩️' }
+                    { type: 'return', name: 'Return', icon: '↩️' },
+                    { type: 'pass', name: 'Pass', icon: '⏩' }
                 ],
                 control: [
                     { type: 'if', name: 'If', icon: '❓' },
@@ -864,7 +927,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                     { type: 'raise', name: 'Raise', icon: '⚠️' }
                 ],
                 misc: [
-                    { type: 'pass', name: 'Pass', icon: '⏩' },
+
                     { type: 'comment', name: 'Comment', icon: '💬' },
                     { type: 'expression', name: 'Expression', icon: '📊' }
                 ]
@@ -1270,15 +1333,26 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 }
             }
 
+            // --- AUTO SAVE ---
+            let isAutoSave = true; // Default ON
+            
+            const triggerAutoSave = debounce(() => {
+                if(isAutoSave) {
+                    updateSyncStatus('syncing');
+                    vscode.postMessage({ type: 'REQUEST_SYNC', payload: { direction: 'toCode', blocks } }); 
+                }
+            }, 800);
+
             function notifyBlocksChanged() {
                 vscode.postMessage({ type: 'BLOCKS_CHANGED', payload: { blocks } });
+                if(isAutoSave) triggerAutoSave();
             }
             
             function updateSyncStatus(status) {
                  const el = document.getElementById('sync-status');
-                 if(el) {
-                    el.className = 'sync-indicator ' + status;
-                    const text = { synced: 'Synced', pending: 'Pending', error: 'Error' }[status];
+                if(el) {
+                    el.className = 'sync-indicator ' + (status === 'syncing' ? 'pending' : status);
+                    const text = { synced: 'Synced', pending: 'Pending', error: 'Error', syncing: 'Syncing...' }[status] || status;
                     el.innerHTML = \`<span>●</span><span>\${text}</span>\`;
                  }
             }
@@ -1287,6 +1361,17 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             setupEventListeners();
             initPalette();
             
+            // Auto Save Toggle
+            const chkAutoSave = document.getElementById('chk-auto-save');
+            if(chkAutoSave) {
+                chkAutoSave.checked = isAutoSave;
+                chkAutoSave.addEventListener('change', (e) => {
+                    isAutoSave = e.target.checked;
+                    log('info', 'Auto Save: ' + (isAutoSave ? 'ON' : 'OFF'));
+                    if(isAutoSave) triggerAutoSave();
+                });
+            }
+
             // Bind Toolbar Buttons
             document.getElementById('btn-sync').onclick = () => { 
                 // Send blocks payload!

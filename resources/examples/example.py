@@ -1,12 +1,11 @@
-"""
-Example Python file for testing VisualPy
-"""
+"""Example Python file for testing VisualPy"""
 
 import os
 import sys
 from pathlib import Path
 
 # Configuration
+
 DEBUG = True
 MAX_ITEMS = 100
 
@@ -30,6 +29,7 @@ def calculate_sum(numbers: list[int]) -> int:
 
 class Calculator:
     """A simple calculator class."""
+
     def __init__(self, initial_value: int=0):
         self.value = initial_value
 
@@ -54,9 +54,7 @@ def main():
     calc = Calculator(10)
 
     calc.add(5)
-
     calc.subtract(3)
-
     print(f"Calculator value: {calc.value}")
 
     if DEBUG:

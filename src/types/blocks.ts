@@ -114,7 +114,7 @@ export const BLOCK_TYPE_CATEGORY: Record<BlockType, BlockCategory> = {
     raise: 'exceptions',
     with: 'context',
     assert: 'misc',
-    pass: 'misc',
+    pass: 'functions',
     comment: 'misc',
     expression: 'misc',
     error: 'misc'
