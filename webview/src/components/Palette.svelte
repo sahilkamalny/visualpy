@@ -58,6 +58,7 @@
                 placeholder="Search blocks…"
                 bind:value={searchQuery}
                 class="vp-search-input"
+                onkeydown={(e) => e.stopPropagation()}
             />
             {#if searchQuery}
                 <button

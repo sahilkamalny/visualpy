@@ -18,13 +18,17 @@
         blockStore.redo();
     }
     function handleDelete() {
-        if (uiState.selectedBlockId) {
-            blockStore.removeBlock(uiState.selectedBlockId);
-            uiState.selectBlock(null);
+        if (uiState.selectedBlockIds.length > 0) {
+            blockStore.removeBlocks([...uiState.selectedBlockIds]);
+            uiState.clearSelection();
         }
     }
     function toggleAutoSave() {
         uiState.autoSave = !uiState.autoSave;
+        // If auto-save was just turned ON, sync any pending changes
+        if (uiState.autoSave) {
+            handleSave();
+        }
     }
     function handleCollapseAll() {
         for (const block of blockStore.blocks) {
@@ -53,7 +57,7 @@
             : uiState.syncStatus === "syncing"
               ? "Syncing..."
               : uiState.syncStatus === "pending"
-                ? "Pending..."
+                ? "Syncing..."
                 : "Error",
     );
 
@@ -73,6 +77,7 @@
         <span class="vp-sync-indicator {syncClass}">
             <span class="vp-sync-dot"></span>
             <span class="vp-sync-text">{syncLabel}</span>
+            <span class="vp-sync-refresh" title="Refresh">↻</span>
         </span>
     </div>
 
@@ -220,6 +225,23 @@
     }
     .vp-sync-indicator.error .vp-sync-dot {
         background: #f87171;
+    }
+    .vp-sync-refresh {
+        font-size: 12px;
+        opacity: 0.5;
+        transition: opacity var(--vp-transition-fast);
+    }
+    .vp-sync-indicator.pending .vp-sync-refresh {
+        animation: vp-spin 1s linear infinite;
+        opacity: 0.8;
+    }
+    @keyframes vp-spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     /* Buttons */

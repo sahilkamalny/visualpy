@@ -16,7 +16,7 @@
 
     const colors = $derived(BLOCK_COLORS[block.category] || BLOCK_COLORS.misc);
     const icon = $derived(BLOCK_ICONS[block.type] || "📦");
-    const isSelected = $derived(uiState.selectedBlockId === block.id);
+    const isSelected = $derived(uiState.selectedBlockIds.includes(block.id));
     const isDragSource = $derived(
         dragState.data.phase !== "idle" && dragState.data.sourceId === block.id,
     );
@@ -26,7 +26,12 @@
 
     function handleSelect(e: MouseEvent) {
         e.stopPropagation();
-        uiState.selectBlock(block.id);
+        // Ensure webview takes keyboard focus away from other VS Code panels
+        window.focus();
+        // Toggle this block in the selection set.
+        // Click adds/removes blocks from the selection.
+        // Click on empty canvas area deselects all (handled in Canvas.svelte).
+        uiState.toggleBlockSelection(block.id);
         // Notify host for code highlighting
         if (block.metadata?.sourceRange) {
             send({
@@ -45,7 +50,10 @@
     function handleContextMenu(e: MouseEvent) {
         e.preventDefault();
         e.stopPropagation();
-        uiState.selectBlock(block.id);
+        // If block isn't already selected, select it
+        if (!uiState.selectedBlockIds.includes(block.id)) {
+            uiState.toggleBlockSelection(block.id);
+        }
         uiState.showContextMenu(e.clientX, e.clientY, block.id);
     }
 
@@ -58,6 +66,29 @@
         const target = e.target as HTMLInputElement;
         blockStore.updateField(block.id, fieldId, target.value);
     }
+
+    // --- Field focus/blur for undo history ---
+    // Save old value on focus; push undo on blur only if changed.
+    let fieldFocusValue = "";
+
+    function handleFieldFocus(e: FocusEvent) {
+        e.stopPropagation();
+        fieldFocusValue = (e.target as HTMLInputElement).value;
+        // Save current blocks state for undo (before any typing)
+        blockStore.saveSnapshot();
+    }
+
+    function handleFieldBlur(e: FocusEvent) {
+        const newVal = (e.target as HTMLInputElement).value;
+        if (newVal !== fieldFocusValue) {
+            // Value changed during this focus session — the snapshot is
+            // already saved, so the next mutation auto-committed it.
+            // No further action needed.
+        } else {
+            // Value unchanged — discard the snapshot we saved on focus
+            blockStore.discardSnapshot();
+        }
+    }
 </script>
 
 <div
@@ -69,6 +100,7 @@
     data-block-type={block.type}
     style="--block-color: {colors.primary}; --block-accent: {colors.accent}; --depth: {depth};"
     role="treeitem"
+    tabindex="0"
     aria-selected={isSelected}
     aria-expanded={hasChildren ? !isCollapsed : undefined}
     onclick={handleSelect}
@@ -91,6 +123,10 @@
                         placeholder={field.placeholder || field.label}
                         title={field.label}
                         oninput={(e) => handleFieldInput(field.id, e)}
+                        onfocus={handleFieldFocus}
+                        onblur={handleFieldBlur}
+                        onkeydown={(e) => e.stopPropagation()}
+                        onclick={(e) => e.stopPropagation()}
                     />
                 {/each}
             </div>
@@ -163,6 +199,7 @@
 
     .vp-block.selected {
         border-color: var(--block-color);
+        background: color-mix(in srgb, var(--block-color) 20%, var(--vp-bg));
         box-shadow:
             0 0 0 2px color-mix(in srgb, var(--block-color) 25%, transparent),
             0 4px 12px color-mix(in srgb, var(--block-color) 20%, transparent);

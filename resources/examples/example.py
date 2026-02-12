@@ -78,10 +78,14 @@ def main():
 
         print(f"You entered: {x}")
     except ValueError as e:
-        print(f"Invalid input: {e}")
+        pass
     finally:
-        print("Done!")
+        pass
 
+    print(f"Invalid input: {e}")
+
+
+print("Done!")
 
 if __name__ == "__main__":
     main()

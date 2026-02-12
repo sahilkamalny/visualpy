@@ -18,6 +18,7 @@ class BlockStoreImpl {
     blocks = $state<Block[]>([]);
     private _past = $state<string[]>([]);
     private _future = $state<string[]>([]);
+    private _pendingSnapshot: string | null = null;
 
     canUndo = $derived(this._past.length > 0);
     canRedo = $derived(this._future.length > 0);
@@ -27,6 +28,34 @@ class BlockStoreImpl {
         this._past.push(JSON.stringify(this.blocks));
         if (this._past.length > MAX_HISTORY) this._past.shift();
         this._future = [];
+    }
+
+    /**
+     * Save a snapshot of the current state for undo.
+     * Called when a text field gains focus (before any typing).
+     */
+    saveSnapshot(): void {
+        this._pendingSnapshot = JSON.stringify(this.blocks);
+    }
+
+    /**
+     * Commit the pending snapshot to the undo stack.
+     * Called indirectly: updateField checks for a pending snapshot.
+     */
+    private commitSnapshot(): void {
+        if (this._pendingSnapshot !== null) {
+            this._past.push(this._pendingSnapshot);
+            if (this._past.length > MAX_HISTORY) this._past.shift();
+            this._future = [];
+            this._pendingSnapshot = null;
+        }
+    }
+
+    /**
+     * Discard the pending snapshot (field value didn't change).
+     */
+    discardSnapshot(): void {
+        this._pendingSnapshot = null;
     }
 
     /** Replace blocks from external source (e.g., INIT message). Clears history. */
@@ -157,6 +186,14 @@ class BlockStoreImpl {
         this.blocks = [...this.blocks];
     }
 
+    removeBlocks(ids: string[]): void {
+        this.pushHistory();
+        for (const id of ids) {
+            this.removeFromTree(id);
+        }
+        this.blocks = [...this.blocks];
+    }
+
     duplicateBlock(id: string): void {
         const original = this.findBlock(id);
         if (!original) return;
@@ -174,6 +211,9 @@ class BlockStoreImpl {
         if (!block) return;
         const field = block.content.editable?.find(f => f.id === fieldId);
         if (field) {
+            // Commit the focus-time snapshot (if any) on first keystroke.
+            // This gives us exactly one undo entry per focus session.
+            this.commitSnapshot();
             field.value = value;
             // Trigger reactivity 
             this.blocks = [...this.blocks];
@@ -206,6 +246,50 @@ class BlockStoreImpl {
                 collapsed: false,
             },
         };
+    }
+
+    /**
+     * Smart merge: updates blocks from external source but preserves IDs of matching blocks.
+     * This prevents UI thrashing (scroll loss, selection loss) when the extension re-parses code.
+     */
+    reconcileBlocks(newBlocks: Block[]): void {
+        const oldBlocks = this.blocks;
+        this.reconcileList(newBlocks, oldBlocks);
+        this.blocks = newBlocks;
+        // Do NOT clear history.
+        // We want to preserve the undo stack even if the backend reformats/syncs code.
+        // this._past = []; 
+        // this._future = [];
+    }
+
+    private reconcileList(newList: Block[], oldList: Block[]): void {
+        for (let i = 0; i < newList.length; i++) {
+            const newBlock = newList[i];
+            // Try to find a matching block in the old list at the same index
+            // (Heuristic: massive reshuffles might lose identity, but that's acceptable for now)
+            const oldBlock = oldList[i];
+
+            if (oldBlock && oldBlock.type === newBlock.type) {
+                // Match found! Preserve ID.
+                newBlock.id = oldBlock.id;
+
+                // Preserve UI state (collapsed)
+                if (oldBlock.metadata?.collapsed !== undefined) {
+                    if (!newBlock.metadata) newBlock.metadata = {} as any;
+                    newBlock.metadata.collapsed = oldBlock.metadata.collapsed;
+                }
+
+                // Recurse children
+                if (newBlock.children && oldBlock.children) {
+                    this.reconcileList(newBlock.children, oldBlock.children);
+                }
+
+                // Recurse attachments (elif, else, etc.)
+                if (newBlock.attachments && oldBlock.attachments) {
+                    this.reconcileList(newBlock.attachments, oldBlock.attachments);
+                }
+            }
+        }
     }
 }
 

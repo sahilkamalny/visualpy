@@ -15,7 +15,9 @@ function getVsCodeApi(): VsCodeApi {
 
 /** Send a typed message to the extension host */
 export function send(message: WebviewMessage): void {
-    getVsCodeApi().postMessage(message);
+    // Strip Svelte 5 $state proxies — structured clone (used by postMessage)
+    // cannot handle reactive proxies, so we JSON round-trip to plain objects.
+    getVsCodeApi().postMessage(JSON.parse(JSON.stringify(message)));
 }
 
 /** Log to the extension host's output channel */

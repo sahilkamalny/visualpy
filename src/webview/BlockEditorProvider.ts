@@ -21,6 +21,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     private blocks: Block[] = [];
     private syncStatus: SyncStatus = 'synced';
     private isUpdatingCode = false;
+    private _lastSyncedCode = '';
     private disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -283,6 +284,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
 
         try {
             const code = blocksToCode(this.blocks);
+            this._lastSyncedCode = code;
             const edit = new vscode.WorkspaceEdit();
             const fullRange = new vscode.Range(
                 this.currentDocument.positionAt(0),
@@ -296,11 +298,16 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             if (success) {
                 Logger.info('Code sync successful');
                 this.syncStatus = 'synced';
-                // Don't send blocks back immediately to avoid loop, just status
                 this.sendMessage({
                     type: 'SYNC_STATUS',
                     payload: { status: 'synced' }
                 });
+
+                // Re-parse to capture implicit changes (e.g. `pass` inserted by blocksToCode)
+                // and send updated blocks. The webview's reconcileBlocks logic prevents flicker.
+                await this.parseAndSendBlocks();
+                // Update hash after re-parse (parseAndSendBlocks doesn't change the document)
+                this._lastSyncedCode = this.currentDocument.getText();
             } else {
                 Logger.error('Code sync failed: applyEdit returned false');
                 this.syncStatus = 'error';
@@ -317,10 +324,9 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 payload: { status: 'error', message: 'Sync failed' }
             });
         } finally {
-            // Short timeout to allow VS Code events to settle before processing new changes
             setTimeout(() => {
                 this.isUpdatingCode = false;
-            }, 100);
+            }, 500);
         }
     }
 
@@ -343,33 +349,21 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      * Handle document edits
      */
     private handleDocumentEdit = debounce((event: vscode.TextDocumentChangeEvent) => {
-        if (this.isUpdatingCode) {
-            return;
+        // Use content hash to determine if this is our own edit or an external one.
+        // This is more robust than flag-based approaches that can swallow external edits.
+        if (this.currentDocument) {
+            const currentNorm = this.currentDocument.getText().replace(/\r\n/g, '\n');
+            const syncedNorm = this._lastSyncedCode.replace(/\r\n/g, '\n');
+            if (currentNorm === syncedNorm) {
+                return; // Our own edit, skip
+            }
         }
 
         Logger.debug('Document edited externally');
 
-        const config = getConfig();
-        if (config.syncMode === 'realtime') {
-            this.parseAndSendBlocks();
-        } else {
-            this.syncStatus = 'pending';
-            this.sendMessage({
-                type: 'SYNC_STATUS',
-                payload: { status: 'pending' }
-            });
-            // Auto-refresh blocks logic:
-            // If the user didn't initiate the change (it's external), we should probably update the view
-            // But we need to be careful not to overwrite their block edits if they are editing blocks.
-            // For now, let's auto-update blocks if we are NOT in the middle of a block edit.
-
-            // Actually, the issue reported is "Stale State: The blocks do not update when the Python file is edited externally".
-            // So we MUST call parseAndSendBlocks here, but maybe verify if we have pending block changes?
-            // "Refresh" button exists for manual override.
-            // Let's force update for now as per "Test 2" requirement.
-            this.parseAndSendBlocks();
-        }
-    }, 500);
+        // Re-parse: user edited the Python file externally
+        this.parseAndSendBlocks();
+    }, 200);
 
     /**
      * Handle document save

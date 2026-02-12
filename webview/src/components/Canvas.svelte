@@ -29,10 +29,10 @@
     });
 
     function handleCanvasClick(e: MouseEvent) {
-        // Click on empty canvas area → deselect
+        // Click on empty canvas area → deselect all
         const target = e.target as HTMLElement;
         if (target === canvasEl || target === scrollContainer) {
-            uiState.selectBlock(null);
+            uiState.clearSelection();
         }
     }
 
@@ -54,6 +54,7 @@
     onclick={handleCanvasClick}
     oncontextmenu={handleContextMenu}
     role="tree"
+    tabindex="0"
     aria-label="Block canvas"
 >
     <div
@@ -82,6 +83,7 @@
         flex: 1;
         overflow: auto;
         position: relative;
+        outline: none;
         background: radial-gradient(
                 circle at 50% 0%,
                 color-mix(in srgb, var(--vp-focus) 4%, transparent),

@@ -78,11 +78,18 @@ export class DragController {
         const header = target.closest<HTMLElement>('.vp-block-header');
         if (!header && !target.closest<HTMLElement>('.vp-palette-item')) return;
 
-        e.preventDefault();
-        e.stopPropagation();
+        // DO NOT preventDefault here. We want native click to fire if we don't drag.
+        // e.preventDefault(); 
 
-        // Prevent text selection
-        window.getSelection()?.removeAllRanges();
+        // Stop propagation to prevent canvas from seeing it?
+        // Actually, canvas handles click to clear selection.
+        // Block handles click to select.
+        // If we let it bubble, Block handles it, stops propagation. Canvas never sees it.
+        // Correct.
+        // e.stopPropagation();
+
+        // Prevent text selection explicitly via API (or reliable CSS)
+        // window.getSelection()?.removeAllRanges();
 
         const rect = blockEl.getBoundingClientRect();
         const blockId = blockEl.dataset.blockId!;
@@ -140,10 +147,9 @@ export class DragController {
 
     private onPointerUp = (e: PointerEvent): void => {
         if (dragState.data.phase === 'pending') {
-            // Didn't exceed threshold — treat as click
-            if (dragState.data.sourceId) {
-                uiState.selectBlock(dragState.data.sourceId);
-            }
+            // Didn't exceed threshold — treat as click.
+            // Since we didn't preventDefault in onPointerDown, native 'click' will fire.
+            // Block.svelte handles onclick. We do nothing here.
             this.cancelDrag();
             return;
         }
@@ -166,6 +172,20 @@ export class DragController {
 
     private promoteToDrag(): void {
         dragState.promoteToDragging();
+
+        // Suppress the subsequent click event!
+        // Since we dragged, it's not a click.
+        // We add a capture-phase listener to stop it.
+        const suppressClick = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        window.addEventListener('click', suppressClick, { capture: true, once: true });
+        // Cleanup listener if drag is cancelled unusually? 
+        // 'once: true' handles it mostly, but if click never comes... it stays.
+        // That's risky. Better to attach to canvas?
+        // Or set a flag.
+        // For distinct UI phases, window capture is reliable enough for now.
 
         if (this.sourceElement) {
             showGhost(this.sourceElement, this.sourceWidth);

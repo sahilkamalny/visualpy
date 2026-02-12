@@ -4,32 +4,43 @@
     import { deepClone, generateId } from "../lib/utils";
 
     function handleCopy() {
-        if (!uiState.contextMenu.blockId) return;
-        const block = blockStore.findBlock(uiState.contextMenu.blockId);
-        if (block) {
-            uiState.clipboard = deepClone(block);
-        }
+        const ids = uiState.selectedBlockIds;
+        if (ids.length === 0) return;
+        const blocks = ids
+            .map((id) => blockStore.findBlock(id))
+            .filter(Boolean);
+        uiState.clipboard = blocks.map((b) => deepClone(b));
         uiState.hideContextMenu();
     }
 
     function handlePaste() {
-        if (!uiState.clipboard || !uiState.contextMenu.blockId) return;
-        const clone = deepClone(uiState.clipboard) as any;
-        reId(clone);
-        blockStore.insertBlock(clone, uiState.contextMenu.blockId);
+        if (!uiState.clipboard) return;
+        const items = Array.isArray(uiState.clipboard)
+            ? uiState.clipboard
+            : [uiState.clipboard];
+        const targetId = uiState.contextMenu.blockId;
+        for (const item of items) {
+            const clone = deepClone(item) as any;
+            reId(clone);
+            blockStore.insertBlock(clone, targetId);
+        }
         uiState.hideContextMenu();
     }
 
     function handleDuplicate() {
-        if (!uiState.contextMenu.blockId) return;
-        blockStore.duplicateBlock(uiState.contextMenu.blockId);
+        const ids = uiState.selectedBlockIds;
+        if (ids.length === 0) return;
+        for (const id of ids) {
+            blockStore.duplicateBlock(id);
+        }
         uiState.hideContextMenu();
     }
 
     function handleDelete() {
-        if (!uiState.contextMenu.blockId) return;
-        blockStore.removeBlock(uiState.contextMenu.blockId);
-        uiState.selectBlock(null);
+        const ids = uiState.selectedBlockIds;
+        if (ids.length === 0) return;
+        blockStore.removeBlocks([...ids]);
+        uiState.clearSelection();
         uiState.hideContextMenu();
     }
 

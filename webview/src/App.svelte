@@ -10,27 +10,46 @@
   import { debounce } from "./lib/utils";
   import type { Block } from "./lib/types";
 
+  // Guard: don't sync blocks back to the host until we've received
+  // the first INIT payload.
+  let initialized = false;
+
+  // Guard: suppress the $effect from echoing blocks back when we
+  // are processing an incoming message from the extension host.
+  let receivingFromHost = false;
+
   // --- Extension host message handler ---
   onMessage((message) => {
-    switch (message.type) {
-      case "INIT":
-        blockStore.setBlocks(message.payload.blocks);
-        uiState.setFileName(message.payload.fileName);
-        if (message.payload.config?.defaultZoom) {
-          uiState.setZoom(message.payload.config.defaultZoom);
-        }
-        break;
-
-      case "UPDATE_BLOCKS":
-        blockStore.updateBlocks(message.payload.blocks);
-        if (message.payload.fileName) {
+    receivingFromHost = true;
+    try {
+      switch (message.type) {
+        case "INIT":
+          if (!initialized) {
+            blockStore.setBlocks(message.payload.blocks);
+            initialized = true;
+          } else {
+            blockStore.reconcileBlocks(message.payload.blocks);
+          }
           uiState.setFileName(message.payload.fileName);
-        }
-        break;
+          if (message.payload.config?.defaultZoom) {
+            uiState.setZoom(message.payload.config.defaultZoom);
+          }
+          break;
 
-      case "SYNC_STATUS":
-        uiState.setSyncStatus(message.payload.status);
-        break;
+        case "UPDATE_BLOCKS":
+          blockStore.reconcileBlocks(message.payload.blocks);
+          if (message.payload.fileName) {
+            uiState.setFileName(message.payload.fileName);
+          }
+          break;
+
+        case "SYNC_STATUS":
+          uiState.setSyncStatus(message.payload.status);
+          break;
+      }
+    } finally {
+      lastBlocksJson = JSON.stringify(blockStore.blocks);
+      receivingFromHost = false;
     }
   });
 
@@ -43,47 +62,98 @@
         payload: { direction: "toCode", blocks: blockStore.blocks },
       });
     }
-  }, 800);
+  }, 200);
 
-  // React to block changes — notify host + auto-save
+  // React to block changes — notify host + auto-save.
+  // Skips when: not yet initialized, or receiving blocks from host.
   let lastBlocksJson = "";
   $effect(() => {
     const json = JSON.stringify(blockStore.blocks);
     if (json !== lastBlocksJson) {
       lastBlocksJson = json;
 
-      // Persist state for webview lifecycle
-      saveState({ blocks: blockStore.blocks, zoom: uiState.zoomLevel });
+      if (!initialized || receivingFromHost) return;
 
-      // Notify extension host of changes
+      saveState({ blocks: blockStore.blocks, zoom: uiState.zoomLevel });
       send({ type: "BLOCKS_CHANGED", payload: { blocks: blockStore.blocks } });
 
-      // Auto-save
       if (uiState.autoSave) {
         triggerAutoSave();
       }
     }
   });
 
+  // --- Collect all block IDs (for Ctrl+A) ---
+  function collectAllBlockIds(blocks: Block[]): string[] {
+    const ids: string[] = [];
+    for (const b of blocks) {
+      ids.push(b.id);
+      if (b.children) ids.push(...collectAllBlockIds(b.children));
+      if (b.attachments) ids.push(...collectAllBlockIds(b.attachments));
+    }
+    return ids;
+  }
+
+  // --- Check if the active element is a text input ---
+  function isTextInput(el: Element | null): boolean {
+    if (!el) return false;
+    const tag = (el as HTMLElement).tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return true;
+    if ((el as HTMLElement).isContentEditable) return true;
+    return false;
+  }
+
+  // After undo/redo/delete, Svelte re-renders the block tree and the
+  // browser auto-focuses the first focusable element (the search input).
+  // This forces focus back to the canvas after the DOM settles.
+  function refocusCanvas() {
+    requestAnimationFrame(() => {
+      const canvas = document.querySelector(
+        ".vp-canvas-container",
+      ) as HTMLElement | null;
+      if (canvas) canvas.focus();
+    });
+  }
+
   // --- Keyboard shortcuts ---
+  // ALL app-level shortcuts are disabled when focused inside a text field.
   function onKeyDown(e: KeyboardEvent) {
-    const target = e.target as HTMLElement;
-    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+    if (isTextInput(e.target as Element)) return;
 
     if (e.ctrlKey && e.key === "z") {
       e.preventDefault();
+      e.stopImmediatePropagation();
       blockStore.undo();
+      refocusCanvas();
     } else if (e.ctrlKey && e.key === "y") {
       e.preventDefault();
+      e.stopImmediatePropagation();
       blockStore.redo();
+      refocusCanvas();
+    } else if (e.key === "a") {
+      // Bare "a" key to select/deselect all blocks
+      // (Ctrl+A is intercepted by VS Code for text highlight)
+      e.preventDefault();
+      const allIds = collectAllBlockIds(blockStore.blocks);
+      uiState.selectAll(allIds);
+    } else if (e.key === "+" || e.key === "=") {
+      e.preventDefault();
+      uiState.zoomIn();
+    } else if (e.key === "-") {
+      e.preventDefault();
+      uiState.zoomOut();
+    } else if (e.key === "0") {
+      e.preventDefault();
+      uiState.resetZoom();
     } else if (e.key === "Delete") {
       e.preventDefault();
-      if (uiState.selectedBlockId) {
-        blockStore.removeBlock(uiState.selectedBlockId);
-        uiState.selectBlock(null);
+      if (uiState.selectedBlockIds.length > 0) {
+        blockStore.removeBlocks([...uiState.selectedBlockIds]);
+        uiState.clearSelection();
       }
+      refocusCanvas();
     } else if (e.key === "Escape") {
-      uiState.selectBlock(null);
+      uiState.clearSelection();
       uiState.hideContextMenu();
     }
   }
