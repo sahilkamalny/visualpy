@@ -10,7 +10,7 @@
 import { dragState } from '../stores/dragState.svelte';
 import { blockStore } from '../stores/blockStore.svelte';
 import { uiState } from '../stores/uiState.svelte';
-import { showGhost, moveGhost, hideGhost } from './Ghost';
+import { showGhost, moveGhost, hideGhost, setGhostZoom } from './Ghost';
 import { buildDropZoneCache, findClosestDropZone, type DropZone } from './DropZoneCache';
 import { autoScroll } from './AutoScroll';
 import type { BlockType, BlockCategory } from '../types';
@@ -37,17 +37,7 @@ export class DragController {
 
     private sourceElements: HTMLElement[] = [];
     private sourceWidth = 0;
-
-    // ...
-
-    // --- Pointer Event Handlers ---
-
-
-
-
-
-
-
+    private lastZoom = 1;
 
     // Active drop indicator element
     private activeIndicator: HTMLElement | null = null;
@@ -70,6 +60,25 @@ export class DragController {
         this.abortController?.abort();
         this.abortController = null;
         this.cancelDrag();
+    }
+
+    /**
+     * Get the current scale from the DOM to ensure we match the rendered state.
+     * This avoids sync issues between Svelte state and actual DOM layout.
+     */
+    private getDomScale(): number {
+        const style = window.getComputedStyle(this.canvas);
+        const transform = style.transform;
+        if (!transform || transform === 'none') return 1;
+
+        // matrix(scaleX, skewY, skewX, scaleY, translateX, translateY)
+        const match = transform.match(/^matrix\((.+)\)$/);
+        if (match) {
+            const values = match[1].split(',').map(parseFloat);
+            // Assuming uniform scale (a = d in matrix model)
+            return values[0] || 1;
+        }
+        return 1;
     }
 
     // --- Pointer Event Handlers ---
@@ -193,11 +202,6 @@ export class DragController {
             e.stopPropagation();
         };
         window.addEventListener('click', suppressClick, { capture: true, once: true });
-        // Cleanup listener if drag is cancelled unusually? 
-        // 'once: true' handles it mostly, but if click never comes... it stays.
-        // That's risky. Better to attach to canvas?
-        // Or set a flag.
-        // For distinct UI phases, window capture is reliable enough for now.
 
         // Check for multi-selection
         const clickedId = (this.sourceElements[0]?.dataset.blockId) || '';
@@ -258,6 +262,25 @@ export class DragController {
         this.rafId = null;
         if (dragState.data.phase !== 'dragging') return;
 
+        // Reads DOM state directly to handle zoom transitions correctly
+        const domScale = this.getDomScale();
+
+        // Check if scale changed significantly from last frame
+        if (Math.abs(this.lastZoom - domScale) > 0.001) {
+            this.lastZoom = domScale;
+
+            // Rebuild drop zones with new layout
+            const sourceId = dragState.data.sourceId || '';
+            let excludeIds = [sourceId];
+            if (uiState.selectedBlockIds.includes(sourceId)) {
+                excludeIds = uiState.selectedBlockIds;
+            }
+            this.dropZones = buildDropZoneCache(this.canvas, excludeIds);
+
+            // Update ghost scale
+            setGhostZoom(domScale);
+        }
+
         // 1. Position the ghost
         const gx = this.pointerX - this.offsetX;
         const gy = this.pointerY - this.offsetY;
@@ -270,7 +293,7 @@ export class DragController {
         const zone = findClosestDropZone(this.dropZones, this.pointerX, this.pointerY);
 
         // 4. Update drop indicator
-        this.updateDropIndicator(zone);
+        this.updateDropIndicator(zone, domScale);
 
         // 5. Update drag state (only if changed)
         const current = dragState.data.dropTarget;
@@ -351,7 +374,7 @@ export class DragController {
 
     // --- Drop Indicator ---
 
-    private updateDropIndicator(zone: DropZone | null): void {
+    private updateDropIndicator(zone: DropZone | null, scale: number): void {
         this.clearDropIndicator();
 
         if (!zone) return;
@@ -360,25 +383,14 @@ export class DragController {
         const indicator = document.createElement('div');
         indicator.className = 'vp-drop-indicator';
 
-        // Calculate position in scaled coordinates
-        const scale = uiState.zoomLevel / 100;
         const scrollTop = this.scrollContainer.scrollTop;
         const containerRect = this.scrollContainer.getBoundingClientRect();
 
         // Convert viewport delta to local scaled space
-        // y_local * scale = y_viewport - container_top + scrollTop (approx)
-        // Note: scrollTop on the container is in unscaled pixels relative to the container's viewport,
-        // but the content size IS scaled.
-        // Actually, containerRect.top is viewport. zone.rect.top is viewport.
-        // The difference is viewport pixels.
-        // To map to local canvas pixels: delta_viewport / scale.
-        // Then add the scroll offset (which is in container-space, effectively viewport-space relative to content start).
-        // Wait, if content is scaled, browser scrollbars adjust.
-        // scrollTop 100 means we scrolled 100 "container pixels".
-        // If scale is 0.5, 100 container pixels = 200 local canvas pixels?
-        // No, usually scrollTop is in CSS pixels of the scroller.
-        // If content is scaled transform, layout size changes.
-        // Let's rely on standard projection:
+        // zone.rect is in viewport pixels (from getBoundingClientRect)
+        // containerRect is in viewport pixels
+        // scrollTop is in scroll container pixels (unscaled if container not scaled, which it isn't, only canvas is)
+
         const yViewportRel = zone.rect.top + zone.rect.height / 2 - containerRect.top;
         const yLocal = (yViewportRel + scrollTop) / scale;
 

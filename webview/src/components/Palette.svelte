@@ -49,7 +49,12 @@
     }
 </script>
 
-<div class="vp-palette" role="complementary" aria-label="Block palette">
+<div
+    class="vp-palette"
+    class:collapsed={uiState.paletteCollapsed}
+    role="complementary"
+    aria-label="Block palette"
+>
     <div class="vp-palette-header">
         <span class="vp-palette-title">Blocks</span>
         <div class="vp-palette-search">
@@ -67,7 +72,24 @@
                 >
             {/if}
         </div>
+        <button
+            class="vp-palette-collapse-btn"
+            onclick={() => uiState.togglePalette()}
+            title="Collapse Sidebar"
+        >
+            ‹‹
+        </button>
     </div>
+
+    <!-- Poking out button when collapsed -->
+    <button
+        class="vp-palette-expand-btn"
+        onclick={() => uiState.togglePalette()}
+        title="Expand Sidebar"
+        aria-hidden={!uiState.paletteCollapsed}
+    >
+        ››
+    </button>
 
     <div class="vp-palette-list">
         {#each filteredCategories as category (category.name)}
@@ -127,11 +149,32 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        position: relative;
+        transition:
+            width 200ms ease,
+            min-width 200ms ease;
+    }
+
+    .vp-palette.collapsed {
+        width: 0;
+        min-width: 0;
+        border-right: none;
+        overflow: visible; /* Allow expand button to poke out */
+    }
+
+    /* Hide children when collapsed to prevent layout issues */
+    .vp-palette.collapsed > *:not(.vp-palette-expand-btn) {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 100ms ease;
     }
 
     .vp-palette-header {
         padding: 10px 12px;
         border-bottom: 1px solid var(--vp-border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .vp-palette-title {
@@ -141,11 +184,62 @@
         letter-spacing: 0.5px;
         opacity: 0.6;
         display: block;
-        margin-bottom: 8px;
+        margin-bottom: 0; /* Adjusted from 8px to fit row */
+        flex: 1;
+    }
+
+    /* Collapse button in header */
+    .vp-palette-collapse-btn {
+        background: none;
+        border: none;
+        color: var(--vp-fg);
+        opacity: 0.6;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 4px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .vp-palette-collapse-btn:hover {
+        opacity: 1;
+        background: var(--vp-hover);
+    }
+
+    /* Expand button poking out */
+    .vp-palette-expand-btn {
+        position: absolute;
+        left: 0;
+        top: 10px;
+        z-index: 100;
+        background: var(--vp-bg);
+        border: 1px solid var(--vp-border);
+        border-left: none; /* Make it look attached */
+        border-radius: 0 6px 6px 0;
+        width: 24px;
+        height: 32px;
+        display: none; /* Hidden by default */
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--vp-fg);
+        font-size: 18px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+    .vp-palette-expand-btn:hover {
+        background: var(--vp-hover);
+    }
+
+    .vp-palette.collapsed .vp-palette-expand-btn {
+        display: flex; /* Show only when collapsed */
     }
 
     .vp-palette-search {
         position: relative;
+        /* flex: 1;  Removed flex:1 so title can take space or share */
+        width: 120px; /* Fixed width for search to fit title + btn */
     }
 
     .vp-search-input {
@@ -157,7 +251,7 @@
         color: var(--vp-input-fg);
         border: 1px solid var(--vp-input-border);
         border-radius: var(--vp-radius-sm);
-        cursor: grab;
+        cursor: text; /* Changed from grab */
         transition: border-color var(--vp-transition-fast);
     }
     .vp-search-input:focus {

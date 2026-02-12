@@ -12,6 +12,7 @@ class UIStateStore {
     fileName = $state('No file open');
     autoSave = $state(true);
     ctrlPressed = $state(false);
+    paletteCollapsed = $state(false);
 
     // Context menu
     contextMenu = $state<{
@@ -58,6 +59,10 @@ class UIStateStore {
         this.selectedBlockIds = [];
     }
 
+    togglePalette(): void {
+        this.paletteCollapsed = !this.paletteCollapsed;
+    }
+
     /** Get the first selected block ID (for backwards compat with single-select code) */
     get selectedBlockId(): string | null {
         return this.selectedBlockIds.length > 0 ? this.selectedBlockIds[0] : null;
@@ -87,8 +92,33 @@ class UIStateStore {
         this.contextMenu = { visible: false, x: 0, y: 0, blockId: null };
     }
 
-    setSyncStatus(status: SyncStatus): void {
+    toast = $state<{
+        visible: boolean;
+        message: string;
+        type: 'info' | 'error' | 'success';
+    }>({ visible: false, message: '', type: 'info' });
+
+    showToast(message: string, type: 'info' | 'error' | 'success' = 'info'): void {
+        this.toast = { visible: true, message, type };
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (this.toast.message === message) { // Only hide if message hasn't changed
+                this.toast.visible = false;
+            }
+        }, 5000);
+    }
+
+    hideToast(): void {
+        this.toast.visible = false;
+    }
+
+    setSyncStatus(status: SyncStatus, message?: string): void {
         this.syncStatus = status;
+        if (message && status === 'error') {
+            this.showToast(message, 'error');
+        } else if (status === 'synced') {
+            this.hideToast();
+        }
     }
 
     setFileName(name: string): void {

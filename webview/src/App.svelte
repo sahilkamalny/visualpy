@@ -3,6 +3,7 @@
   import Palette from "./components/Palette.svelte";
   import Canvas from "./components/Canvas.svelte";
   import ContextMenu from "./components/ContextMenu.svelte";
+  import Toast from "./components/Toast.svelte";
   import { blockStore } from "./lib/stores/blockStore.svelte";
   import { uiState } from "./lib/stores/uiState.svelte";
   import { dragState } from "./lib/stores/dragState.svelte";
@@ -44,7 +45,15 @@
           break;
 
         case "SYNC_STATUS":
-          uiState.setSyncStatus(message.payload.status);
+          uiState.setSyncStatus(
+            message.payload.status,
+            message.payload.message,
+          );
+          break;
+
+        case "PARSE_ERROR":
+          // Show error toast, do NOT update blocks
+          uiState.setSyncStatus("error", message.payload.message);
           break;
       }
     } finally {
@@ -217,6 +226,7 @@
     <Canvas />
   </div>
   <ContextMenu />
+  <Toast />
 </div>
 
 <style>

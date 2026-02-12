@@ -93,7 +93,7 @@
             disabled={!uiState.clipboard}
         >
             <span class="vp-cm-icon">📄</span>
-            <span>Paste After</span>
+            <span>Paste</span>
             <span class="vp-cm-shortcut">Ctrl+V</span>
         </button>
         <button class="vp-cm-item" role="menuitem" onclick={handleDuplicate}>

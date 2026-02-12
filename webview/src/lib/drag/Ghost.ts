@@ -55,10 +55,22 @@ export function showGhost(sourceEls: HTMLElement[], width: number): void {
     });
 }
 
+let currentZoom = 1;
+
+/** Set the zoom scale for the ghost (called when canvas zoom changes) */
+export function setGhostZoom(zoom: number): void {
+    currentZoom = zoom;
+    if (ghost) {
+        // Force update if ghost is visible? 
+        // Typically moveGhost is called on RAF so it updates next frame.
+        // But we can force it if we want.
+    }
+}
+
 /** Update the ghost position using translate3d (GPU-composited) */
 export function moveGhost(x: number, y: number): void {
     if (!ghost) return;
-    ghost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.03)`;
+    ghost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${currentZoom * 1.03})`;
 }
 
 /** Hide and reset the ghost */

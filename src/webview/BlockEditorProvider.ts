@@ -246,8 +246,24 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         try {
             const source = this.currentDocument.getText();
             const parseResult = await this.parserService.parse(source);
+
+            if (!parseResult.success) {
+                const error = parseResult.errors[0];
+                Logger.warn('Parse failed, sending error toast', error);
+                this.sendMessage({
+                    type: 'PARSE_ERROR',
+                    payload: {
+                        message: error.message || 'Syntax error',
+                        line: error.lineno || undefined
+                    }
+                });
+                return;
+            }
+
             this.blocks = astToBlocks(parseResult);
 
+            // Add hash to new blocks
+            // this.assignBlockHashes(this.blocks);
             Logger.info('Sending blocks to webview', { count: this.blocks.length });
 
             this.sendMessage({
@@ -265,8 +281,16 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 type: 'SYNC_STATUS',
                 payload: { status: 'synced' }
             });
-        } catch (error) {
-            Logger.error('Failed to parse and send blocks', error);
+        } catch (error: any) {
+            Logger.error('Failed to parse blocks', error);
+            // Send error to webview so it can show a toast and KEEP existing blocks
+            this.sendMessage({
+                type: 'PARSE_ERROR',
+                payload: {
+                    message: error.message || 'Syntax error in Python code',
+                    line: error.lineNumber
+                }
+            });
         }
     }
 
