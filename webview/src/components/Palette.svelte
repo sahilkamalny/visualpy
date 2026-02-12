@@ -157,7 +157,7 @@
         color: var(--vp-input-fg);
         border: 1px solid var(--vp-input-border);
         border-radius: var(--vp-radius-sm);
-        outline: none;
+        cursor: grab;
         transition: border-color var(--vp-transition-fast);
     }
     .vp-search-input:focus {

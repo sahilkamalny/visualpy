@@ -326,7 +326,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         } finally {
             setTimeout(() => {
                 this.isUpdatingCode = false;
-            }, 500);
+            }, 50); // Reduced from 500ms to 50ms to catch user edits faster
         }
     }
 
@@ -349,6 +349,9 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      * Handle document edits
      */
     private handleDocumentEdit = debounce((event: vscode.TextDocumentChangeEvent) => {
+        // If we are currently updating the code ourselves, ignore this event.
+        if (this.isUpdatingCode) return;
+
         // Use content hash to determine if this is our own edit or an external one.
         // This is more robust than flag-based approaches that can swallow external edits.
         if (this.currentDocument) {
@@ -363,7 +366,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
 
         // Re-parse: user edited the Python file externally
         this.parseAndSendBlocks();
-    }, 200);
+    }, 100); // Reduced from 200ms to 100ms for snappier updates
 
     /**
      * Handle document save

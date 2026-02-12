@@ -3,8 +3,21 @@
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { deepClone, generateId } from "../lib/utils";
 
+    // Helper to get target blocks:
+    // If target block is in selection, use selection.
+    // If target block is NOT in selection (or no selection), use just the target block.
+    function getTargetIds(): string[] {
+        const targetId = uiState.contextMenu.blockId;
+        if (!targetId) return [];
+
+        if (uiState.selectedBlockIds.includes(targetId)) {
+            return [...uiState.selectedBlockIds];
+        }
+        return [targetId];
+    }
+
     function handleCopy() {
-        const ids = uiState.selectedBlockIds;
+        const ids = getTargetIds();
         if (ids.length === 0) return;
         const blocks = ids
             .map((id) => blockStore.findBlock(id))
@@ -28,7 +41,7 @@
     }
 
     function handleDuplicate() {
-        const ids = uiState.selectedBlockIds;
+        const ids = getTargetIds();
         if (ids.length === 0) return;
         for (const id of ids) {
             blockStore.duplicateBlock(id);
@@ -37,9 +50,9 @@
     }
 
     function handleDelete() {
-        const ids = uiState.selectedBlockIds;
+        const ids = getTargetIds();
         if (ids.length === 0) return;
-        blockStore.removeBlocks([...ids]);
+        blockStore.removeBlocks(ids);
         uiState.clearSelection();
         uiState.hideContextMenu();
     }

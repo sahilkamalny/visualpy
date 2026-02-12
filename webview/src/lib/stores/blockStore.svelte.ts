@@ -160,10 +160,84 @@ class BlockStoreImpl {
         this.pushHistory();
         const block = this.removeFromTree(sourceId);
         if (block) {
+            // Adjust index if we removed from the same parent before the target
+            // (Actually removeFromTree doesn't tell us where it came from easily without more lookup)
+            // But for single block move, the caller (DragController) usually provides the visual target index.
+            // If we assume DragController targets are based on the "ghost" position,
+            // we have to be careful.
+            // Simplified: insertAtIndex handles basic insertion.
             this.insertAtIndex(block, targetParentId, targetIndex);
         }
-        // Trigger reactivity
         this.blocks = [...this.blocks];
+    }
+
+    moveBlocks(sourceIds: string[], targetParentId: string | null, targetIndex: number): void {
+        if (sourceIds.length === 0) return;
+        this.pushHistory();
+
+        // 1. Find and sort blocks by their current visual order (tree traversal)
+        // This ensures they stay in relative order when moved
+        const orderedIds: string[] = [];
+        const visit = (list: Block[]) => {
+            for (const b of list) {
+                if (sourceIds.includes(b.id)) orderedIds.push(b.id);
+                if (b.children) visit(b.children);
+                if (b.attachments) visit(b.attachments);
+            }
+        };
+        visit(this.blocks);
+
+        // 2. Remove blocks and collect them
+        const blocksToInsert: Block[] = [];
+        let adjustedTargetIndex = targetIndex;
+
+        for (const id of orderedIds) {
+            // Find parent and index before removing
+            // We need this to adjust targetIndex if removed from same parent
+            const info = this.findBlockInfo(id);
+            if (!info) continue;
+
+            const block = this.removeFromTree(id);
+            if (block) {
+                blocksToInsert.push(block);
+
+                // If removed from the target parent, and was "before" the target index, decrement target index
+                if (info.parentId === targetParentId && info.index < adjustedTargetIndex) {
+                    adjustedTargetIndex--;
+                }
+            }
+        }
+
+        // 3. Insert all at the adjusted index
+        // We insert them in reverse so they end up in the correct order if inserting one by one
+        // OR better: batch insert.
+        // insertAtIndex helper inserts one.
+        // If we insert "orderedIds[0]" at T, then "orderedIds[1]" at T+1...
+
+        let currentIdx = adjustedTargetIndex;
+        for (const block of blocksToInsert) {
+            this.insertAtIndex(block, targetParentId, currentIdx);
+            currentIdx++;
+        }
+
+        this.blocks = [...this.blocks];
+    }
+
+    private findBlockInfo(id: string, list: Block[] = this.blocks, parentId: string | null = null): { parentId: string | null, index: number } | null {
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id === id) return { parentId, index: i };
+            if (list[i].children) {
+                const found = this.findBlockInfo(id, list[i].children, list[i].id);
+                if (found) return found;
+            }
+            if (list[i].attachments) {
+                const found = this.findBlockInfo(id, list[i].attachments, list[i].id); // Attachments share parent? Or are children?
+                // Attachments (elif/else) usually tracked as siblings in some views, but here they are properties.
+                // If we treat them as children for movement...
+                if (found) return found;
+            }
+        }
+        return null;
     }
 
     insertBlock(block: Block, afterTargetId: string | null): void {

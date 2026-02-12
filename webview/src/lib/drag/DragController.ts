@@ -255,8 +255,15 @@ export class DragController {
                 );
                 blockStore.insertBlockAtIndex(newBlock, dropTarget.parentId, dropTarget.index);
             } else if (sourceId) {
-                // Move existing block
-                blockStore.moveBlock(sourceId, dropTarget.parentId, dropTarget.index);
+                // Check if we are dragging a selected block along with others
+                const selection = uiState.selectedBlockIds;
+                if (selection.includes(sourceId) && selection.length > 1) {
+                    // Multi-move
+                    blockStore.moveBlocks(selection, dropTarget.parentId, dropTarget.index);
+                } else {
+                    // Single move
+                    blockStore.moveBlock(sourceId, dropTarget.parentId, dropTarget.index);
+                }
             }
         }
     }

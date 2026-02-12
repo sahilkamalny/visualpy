@@ -83,7 +83,6 @@
         flex: 1;
         overflow: auto;
         position: relative;
-        outline: none;
         background: radial-gradient(
                 circle at 50% 0%,
                 color-mix(in srgb, var(--vp-focus) 4%, transparent),

@@ -28,10 +28,13 @@
         e.stopPropagation();
         // Ensure webview takes keyboard focus away from other VS Code panels
         window.focus();
+
+        // Hide context menu if open
+        uiState.hideContextMenu();
+
         // Toggle this block in the selection set.
-        // Click adds/removes blocks from the selection.
-        // Click on empty canvas area deselects all (handled in Canvas.svelte).
         uiState.toggleBlockSelection(block.id);
+
         // Notify host for code highlighting
         if (block.metadata?.sourceRange) {
             send({
@@ -50,10 +53,7 @@
     function handleContextMenu(e: MouseEvent) {
         e.preventDefault();
         e.stopPropagation();
-        // If block isn't already selected, select it
-        if (!uiState.selectedBlockIds.includes(block.id)) {
-            uiState.toggleBlockSelection(block.id);
-        }
+        // Just show the menu. Do NOT select the block.
         uiState.showContextMenu(e.clientX, e.clientY, block.id);
     }
 
@@ -273,7 +273,6 @@
         color: var(--vp-input-fg);
         border: 1px solid transparent;
         border-radius: 4px;
-        outline: none;
         transition:
             border-color var(--vp-transition-fast),
             background var(--vp-transition-fast);
