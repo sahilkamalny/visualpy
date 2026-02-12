@@ -193,9 +193,22 @@
 
   // Tell the extension host we're ready
   send({ type: "READY" });
+
+  function handleGlobalClick(e: MouseEvent) {
+    if (uiState.contextMenu.visible) return; // ContextMenu handles its own close
+    const target = e.target as HTMLElement;
+    if (
+      target.closest(
+        ".vp-block, button, input, textarea, select, .vp-palette-item, .vp-context-menu",
+      )
+    )
+      return;
+
+    uiState.clearSelection();
+  }
 </script>
 
-<svelte:document onkeydown={onKeyDown} />
+<svelte:document onkeydown={onKeyDown} onclick={handleGlobalClick} />
 
 <div class="vp-app" role="application" aria-label="VisualPy Block Editor">
   <Toolbar />

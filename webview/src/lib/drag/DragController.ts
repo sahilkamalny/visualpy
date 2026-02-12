@@ -34,8 +34,20 @@ export class DragController {
     private originY = 0;
     private offsetX = 0;
     private offsetY = 0;
-    private sourceElement: HTMLElement | null = null;
+
+    private sourceElements: HTMLElement[] = [];
     private sourceWidth = 0;
+
+    // ...
+
+    // --- Pointer Event Handlers ---
+
+
+
+
+
+
+
 
     // Active drop indicator element
     private activeIndicator: HTMLElement | null = null;
@@ -99,7 +111,7 @@ export class DragController {
         this.originY = e.clientY;
         this.offsetX = e.clientX - rect.left;
         this.offsetY = e.clientY - rect.top;
-        this.sourceElement = blockEl;
+        this.sourceElements = [blockEl]; // Initial single source
         this.sourceWidth = rect.width;
         this.pointerX = e.clientX;
         this.pointerY = e.clientY;
@@ -187,11 +199,35 @@ export class DragController {
         // Or set a flag.
         // For distinct UI phases, window capture is reliable enough for now.
 
-        if (this.sourceElement) {
-            showGhost(this.sourceElement, this.sourceWidth);
-            // Dim the original
-            this.sourceElement.style.opacity = '0.3';
-            this.sourceElement.style.transition = 'opacity 150ms ease';
+        // Check for multi-selection
+        const clickedId = (this.sourceElements[0]?.dataset.blockId) || '';
+        const selection = uiState.selectedBlockIds;
+
+        if (selection.includes(clickedId) && selection.length > 1) {
+            // Find all selected elements
+            const allSelectedEls = selection
+                .map(id => document.querySelector(`[data-block-id="${id}"]`) as HTMLElement)
+                .filter(Boolean);
+
+            // Filter out descendants (only keep roots)
+            // Sort by DOM order first
+            allSelectedEls.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+
+            const roots: HTMLElement[] = [];
+            for (const el of allSelectedEls) {
+                const isDescendant = roots.some(root => root.contains(el));
+                if (!isDescendant) roots.push(el);
+            }
+            this.sourceElements = roots;
+        }
+
+        if (this.sourceElements.length > 0) {
+            showGhost(this.sourceElements, this.sourceWidth);
+            // Dim originals
+            this.sourceElements.forEach(el => {
+                el.style.opacity = '0.3';
+                el.style.transition = 'opacity 150ms ease';
+            });
         }
 
         // Capture pointer for reliable tracking (works across iframe boundaries)
@@ -289,11 +325,13 @@ export class DragController {
             // May fail if not captured
         }
 
-        // Restore source element
-        if (this.sourceElement) {
-            this.sourceElement.style.opacity = '';
-            this.sourceElement.style.transition = '';
-            this.sourceElement = null;
+        // Restore source elements
+        if (this.sourceElements.length > 0) {
+            this.sourceElements.forEach(el => {
+                el.style.opacity = '';
+                el.style.transition = '';
+            });
+            this.sourceElements = [];
         }
 
         // Hide ghost

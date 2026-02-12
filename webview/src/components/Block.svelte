@@ -17,9 +17,7 @@
     const colors = $derived(BLOCK_COLORS[block.category] || BLOCK_COLORS.misc);
     const icon = $derived(BLOCK_ICONS[block.type] || "📦");
     const isSelected = $derived(uiState.selectedBlockIds.includes(block.id));
-    const isDragSource = $derived(
-        dragState.data.phase !== "idle" && dragState.data.sourceId === block.id,
-    );
+
     const hasChildren = $derived(!!block.children && block.children.length > 0);
     const isCollapsed = $derived(block.metadata?.collapsed ?? false);
     const hasError = $derived(!!block.metadata?.error);
@@ -94,7 +92,6 @@
 <div
     class="vp-block"
     class:selected={isSelected}
-    class:drag-source={isDragSource}
     class:has-error={hasError}
     data-block-id={block.id}
     data-block-type={block.type}
@@ -203,11 +200,6 @@
         box-shadow:
             0 0 0 2px color-mix(in srgb, var(--block-color) 25%, transparent),
             0 4px 12px color-mix(in srgb, var(--block-color) 20%, transparent);
-    }
-
-    .vp-block.drag-source {
-        opacity: 0.3;
-        transform: scale(0.98);
     }
 
     .vp-block.has-error {

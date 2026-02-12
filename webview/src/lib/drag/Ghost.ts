@@ -27,19 +27,25 @@ function ensureGhost(): HTMLElement {
 }
 
 /** Show the ghost by cloning the source block element */
-export function showGhost(sourceEl: HTMLElement, width: number): void {
+export function showGhost(sourceEls: HTMLElement[], width: number): void {
     const g = ensureGhost();
     g.innerHTML = '';
 
-    // Clone the block visually
-    const clone = sourceEl.cloneNode(true) as HTMLElement;
-    clone.style.width = width + 'px';
-    clone.style.margin = '0';
-    clone.style.boxShadow = '0 12px 40px rgba(0,0,0,0.35)';
-    clone.style.borderRadius = '10px';
-    clone.classList.remove('selected');
-    clone.classList.add('ghost-clone');
-    g.appendChild(clone);
+    sourceEls.forEach(sourceEl => {
+        // Clone the block visually
+        const clone = sourceEl.cloneNode(true) as HTMLElement;
+        clone.style.width = width + 'px'; // Enforce same width for all? Or width of source?
+        // Actually, if we pass width of primary, others might be different?
+        // But usually in code blocks, they are full width or aligned.
+        // Let's stick to passed width for now to keep uniform look.
+
+        clone.style.margin = '0 0 4px 0'; // Add small gap between stacked blocks
+        clone.style.boxShadow = '0 12px 40px rgba(0,0,0,0.35)';
+        clone.style.borderRadius = '10px';
+        clone.classList.remove('selected');
+        clone.classList.add('ghost-clone');
+        g.appendChild(clone);
+    });
 
     g.style.width = width + 'px';
     g.style.display = 'block';
