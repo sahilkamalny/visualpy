@@ -359,22 +359,40 @@ export class DragController {
         // Find or create the indicator line
         const indicator = document.createElement('div');
         indicator.className = 'vp-drop-indicator';
-        // Position it at the zone's vertical center
+
+        // Calculate position in scaled coordinates
+        const scale = uiState.zoomLevel / 100;
         const scrollTop = this.scrollContainer.scrollTop;
         const containerRect = this.scrollContainer.getBoundingClientRect();
-        const y = zone.rect.top + zone.rect.height / 2 - containerRect.top + scrollTop;
+
+        // Convert viewport delta to local scaled space
+        // y_local * scale = y_viewport - container_top + scrollTop (approx)
+        // Note: scrollTop on the container is in unscaled pixels relative to the container's viewport,
+        // but the content size IS scaled.
+        // Actually, containerRect.top is viewport. zone.rect.top is viewport.
+        // The difference is viewport pixels.
+        // To map to local canvas pixels: delta_viewport / scale.
+        // Then add the scroll offset (which is in container-space, effectively viewport-space relative to content start).
+        // Wait, if content is scaled, browser scrollbars adjust.
+        // scrollTop 100 means we scrolled 100 "container pixels".
+        // If scale is 0.5, 100 container pixels = 200 local canvas pixels?
+        // No, usually scrollTop is in CSS pixels of the scroller.
+        // If content is scaled transform, layout size changes.
+        // Let's rely on standard projection:
+        const yViewportRel = zone.rect.top + zone.rect.height / 2 - containerRect.top;
+        const yLocal = (yViewportRel + scrollTop) / scale;
 
         indicator.style.cssText = `
       position: absolute;
-      left: 8px;
-      right: 8px;
-      top: ${y}px;
-      height: 4px;
+      left: ${8 / scale}px;
+      right: ${8 / scale}px;
+      top: ${yLocal}px;
+      height: ${4 / scale}px;
       background: var(--vp-focus, #3B82F6);
-      border-radius: 2px;
+      border-radius: ${2 / scale}px;
       z-index: 100;
       pointer-events: none;
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 ${8 / scale}px rgba(59, 130, 246, 0.5);
       animation: vp-pulse 1.2s ease-in-out infinite;
     `;
 
