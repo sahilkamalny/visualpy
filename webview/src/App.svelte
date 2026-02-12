@@ -7,7 +7,7 @@
   import { uiState } from "./lib/stores/uiState.svelte";
   import { dragState } from "./lib/stores/dragState.svelte";
   import { send, onMessage, saveState } from "./lib/bridge";
-  import { debounce } from "./lib/utils";
+  import { debounce, generateId } from "./lib/utils";
   import type { Block } from "./lib/types";
 
   // Guard: don't sync blocks back to the host until we've received
@@ -153,9 +153,41 @@
       }
       refocusCanvas();
     } else if (e.key === "Escape") {
-      uiState.clearSelection();
       uiState.hideContextMenu();
+    } else if (e.ctrlKey && e.key === "c") {
+      e.preventDefault();
+      const ids = [...uiState.selectedBlockIds];
+      if (ids.length > 0) {
+        const blocks = ids
+          .map((id) => blockStore.findBlock(id))
+          .filter(Boolean);
+        uiState.clipboard = JSON.parse(JSON.stringify(blocks));
+      }
+    } else if (e.ctrlKey && e.key === "v") {
+      e.preventDefault();
+      if (uiState.clipboard) {
+        const items = Array.isArray(uiState.clipboard)
+          ? uiState.clipboard
+          : [uiState.clipboard];
+        for (const item of items) {
+          const clone = JSON.parse(JSON.stringify(item));
+          reId(clone);
+          blockStore.insertBlock(clone, null);
+        }
+      }
+    } else if (e.ctrlKey && e.key === "d") {
+      e.preventDefault();
+      const ids = [...uiState.selectedBlockIds];
+      if (ids.length > 0) {
+        ids.forEach((id) => blockStore.duplicateBlock(id));
+      }
     }
+  }
+
+  function reId(block: any) {
+    block.id = generateId();
+    if (block.children) block.children.forEach(reId);
+    if (block.attachments) block.attachments.forEach(reId);
   }
 
   // Tell the extension host we're ready

@@ -272,7 +272,8 @@ class BlockStoreImpl {
         const original = this.findBlock(id);
         if (!original) return;
         this.pushHistory();
-        const clone = deepClone(original);
+        // Use JSON clone to avoid proxy issues with structuredClone
+        const clone = JSON.parse(JSON.stringify(original));
         reIdBlock(clone);
         if (!this.insertAfter(clone, id)) {
             this.blocks.push(clone);

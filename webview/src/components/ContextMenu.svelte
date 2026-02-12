@@ -22,7 +22,8 @@
         const blocks = ids
             .map((id) => blockStore.findBlock(id))
             .filter(Boolean);
-        uiState.clipboard = blocks.map((b) => deepClone(b));
+        // Use JSON serialization to ensure we store plain data, not Svelte proxies
+        uiState.clipboard = JSON.parse(JSON.stringify(blocks));
         uiState.hideContextMenu();
     }
 
@@ -33,7 +34,8 @@
             : [uiState.clipboard];
         const targetId = uiState.contextMenu.blockId;
         for (const item of items) {
-            const clone = deepClone(item) as any;
+            // Create a deep clone and new IDs
+            const clone = JSON.parse(JSON.stringify(item));
             reId(clone);
             blockStore.insertBlock(clone, targetId);
         }
