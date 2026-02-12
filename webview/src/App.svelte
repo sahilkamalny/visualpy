@@ -27,13 +27,13 @@
           if (!initialized) {
             blockStore.setBlocks(message.payload.blocks);
             initialized = true;
+            if (message.payload.config?.defaultZoom) {
+              uiState.setZoom(message.payload.config.defaultZoom);
+            }
           } else {
             blockStore.reconcileBlocks(message.payload.blocks);
           }
           uiState.setFileName(message.payload.fileName);
-          if (message.payload.config?.defaultZoom) {
-            uiState.setZoom(message.payload.config.defaultZoom);
-          }
           break;
 
         case "UPDATE_BLOCKS":
