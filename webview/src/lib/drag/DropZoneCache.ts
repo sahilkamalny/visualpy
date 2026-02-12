@@ -17,14 +17,14 @@ export interface DropZone {
  */
 export function buildDropZoneCache(
     canvas: HTMLElement,
-    excludeId: string,
+    excludeIds: string[],
 ): DropZone[] {
     const zones: DropZone[] = [];
 
     function walk(container: HTMLElement, parentId: string | null): void {
         const blockEls = Array.from(
             container.querySelectorAll<HTMLElement>(':scope > [data-block-id]')
-        ).filter(el => el.dataset.blockId !== excludeId);
+        ).filter(el => !excludeIds.includes(el.dataset.blockId!));
 
         // Zone before the first block (index 0)
         if (blockEls.length > 0) {

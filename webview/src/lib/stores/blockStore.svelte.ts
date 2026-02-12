@@ -23,13 +23,117 @@ class BlockStoreImpl {
     canUndo = $derived(this._past.length > 0);
     canRedo = $derived(this._future.length > 0);
 
+    private _batchDepth = 0;
+
     /** Push current state to undo stack before a mutation */
     private pushHistory(): void {
+        if (this._batchDepth > 0) return; // Batch transaction in progress
         this._past.push(JSON.stringify(this.blocks));
         if (this._past.length > MAX_HISTORY) this._past.shift();
         this._future = [];
     }
 
+    startBatch(): void {
+        if (this._batchDepth === 0) {
+            this.pushHistory(); // Save state at start of batch
+        }
+        this._batchDepth++;
+    }
+
+    endBatch(): void {
+        if (this._batchDepth > 0) {
+            this._batchDepth--;
+        }
+    }
+
+    // ... (rest of class) ...
+
+    moveBlocks(sourceIds: string[], targetParentId: string | null, targetIndex: number): void {
+        if (sourceIds.length === 0) return;
+        this.pushHistory();
+
+        // 1. Find and sort blocks by their current visual order
+        const orderedIds: string[] = [];
+        const visit = (list: Block[]) => {
+            for (const b of list) {
+                if (sourceIds.includes(b.id)) orderedIds.push(b.id);
+                if (b.children) visit(b.children);
+                if (b.attachments) visit(b.attachments);
+            }
+        };
+        visit(this.blocks);
+
+        // 2. Remove blocks and collect them
+        const blocksToInsert: Block[] = [];
+
+        for (const id of orderedIds) {
+            const block = this.removeFromTree(id);
+            if (block) {
+                blocksToInsert.push(block);
+            }
+        }
+
+        // 3. Insert all at the target index
+        // Since DropZoneCache now excludes all moving blocks, the targetIndex
+        // is already relative to the list *without* these blocks.
+        // No manual adjustment is needed.
+        let currentIdx = targetIndex;
+        for (const block of blocksToInsert) {
+            this.insertAtIndex(block, targetParentId, currentIdx);
+            currentIdx++;
+        }
+
+        this.blocks = [...this.blocks];
+    }
+
+    // ... 
+
+    duplicateBlocks(ids: string[]): void {
+        this.startBatch();
+        try {
+            for (const id of ids) {
+                // duplicateBlock logic inline to avoid double history push if called directly?
+                // But duplicateBlock calls pushHistory. Batch suppresses it.
+                this.duplicateBlock(id);
+            }
+        } finally {
+            this.endBatch();
+        }
+    }
+
+    insertBlocks(blocks: Block[], targetId: string | null): void {
+        this.startBatch();
+        try {
+            // Find target index/parent once?
+            // Or just use insertBlock for each.
+            // If inserting multiple, we probably want them sequential.
+            // insertBlock(block, targetId) inserts AFTER targetId.
+            // If we insert A after T.
+            // Then B after T.
+            // Result: T, B, A. (Reverse order).
+            // We should insert A after T. Then B after A.
+            let currentTargetId = targetId;
+            for (const block of blocks) {
+                this.insertBlock(block, currentTargetId);
+                currentTargetId = block.id; // Next one after this one
+            }
+        } finally {
+            this.endBatch();
+        }
+    }
+
+    duplicateBlock(id: string): void {
+        const original = this.findBlock(id);
+        if (!original) return;
+        this.pushHistory(); // Suppressed if in batch
+        // Use JSON clone to avoid proxy issues with structuredClone
+        const clone = JSON.parse(JSON.stringify(original));
+        reIdBlock(clone);
+        if (!this.insertAfter(clone, id)) {
+            this.blocks.push(clone);
+        }
+        this.blocks = [...this.blocks];
+    }
     /**
      * Save a snapshot of the current state for undo.
      * Called when a text field gains focus (before any typing).
@@ -171,57 +275,7 @@ class BlockStoreImpl {
         this.blocks = [...this.blocks];
     }
 
-    moveBlocks(sourceIds: string[], targetParentId: string | null, targetIndex: number): void {
-        if (sourceIds.length === 0) return;
-        this.pushHistory();
 
-        // 1. Find and sort blocks by their current visual order (tree traversal)
-        // This ensures they stay in relative order when moved
-        const orderedIds: string[] = [];
-        const visit = (list: Block[]) => {
-            for (const b of list) {
-                if (sourceIds.includes(b.id)) orderedIds.push(b.id);
-                if (b.children) visit(b.children);
-                if (b.attachments) visit(b.attachments);
-            }
-        };
-        visit(this.blocks);
-
-        // 2. Remove blocks and collect them
-        const blocksToInsert: Block[] = [];
-        let adjustedTargetIndex = targetIndex;
-
-        for (const id of orderedIds) {
-            // Find parent and index before removing
-            // We need this to adjust targetIndex if removed from same parent
-            const info = this.findBlockInfo(id);
-            if (!info) continue;
-
-            const block = this.removeFromTree(id);
-            if (block) {
-                blocksToInsert.push(block);
-
-                // If removed from the target parent, and was "before" the target index, decrement target index
-                if (info.parentId === targetParentId && info.index < adjustedTargetIndex) {
-                    adjustedTargetIndex--;
-                }
-            }
-        }
-
-        // 3. Insert all at the adjusted index
-        // We insert them in reverse so they end up in the correct order if inserting one by one
-        // OR better: batch insert.
-        // insertAtIndex helper inserts one.
-        // If we insert "orderedIds[0]" at T, then "orderedIds[1]" at T+1...
-
-        let currentIdx = adjustedTargetIndex;
-        for (const block of blocksToInsert) {
-            this.insertAtIndex(block, targetParentId, currentIdx);
-            currentIdx++;
-        }
-
-        this.blocks = [...this.blocks];
-    }
 
     private findBlockInfo(id: string, list: Block[] = this.blocks, parentId: string | null = null): { parentId: string | null, index: number } | null {
         for (let i = 0; i < list.length; i++) {
@@ -268,18 +322,7 @@ class BlockStoreImpl {
         this.blocks = [...this.blocks];
     }
 
-    duplicateBlock(id: string): void {
-        const original = this.findBlock(id);
-        if (!original) return;
-        this.pushHistory();
-        // Use JSON clone to avoid proxy issues with structuredClone
-        const clone = JSON.parse(JSON.stringify(original));
-        reIdBlock(clone);
-        if (!this.insertAfter(clone, id)) {
-            this.blocks.push(clone);
-        }
-        this.blocks = [...this.blocks];
-    }
+
 
     updateField(blockId: string, fieldId: string, value: string): void {
         const block = this.findBlock(blockId);

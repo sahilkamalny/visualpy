@@ -33,21 +33,20 @@
             ? uiState.clipboard
             : [uiState.clipboard];
         const targetId = uiState.contextMenu.blockId;
-        for (const item of items) {
-            // Create a deep clone and new IDs
+        const clones = items.map((item) => {
             const clone = JSON.parse(JSON.stringify(item));
             reId(clone);
-            blockStore.insertBlock(clone, targetId);
-        }
+            return clone;
+        });
+        blockStore.insertBlocks(clones, targetId);
         uiState.hideContextMenu();
     }
 
     function handleDuplicate() {
         const ids = getTargetIds();
         if (ids.length === 0) return;
-        for (const id of ids) {
-            blockStore.duplicateBlock(id);
-        }
+        if (ids.length === 0) return;
+        blockStore.duplicateBlocks(ids);
         uiState.hideContextMenu();
     }
 

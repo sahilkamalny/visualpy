@@ -201,10 +201,17 @@ export class DragController {
             // setPointerCapture can fail if pointer was released before this runs
         }
 
+        // Determine excluded IDs (dragged blocks)
+        const sourceId = dragState.data.sourceId || '';
+        let excludeIds = [sourceId];
+        if (uiState.selectedBlockIds.includes(sourceId)) {
+            excludeIds = uiState.selectedBlockIds;
+        }
+
         // Build drop zone cache
         this.dropZones = buildDropZoneCache(
             this.canvas,
-            dragState.data.sourceId || '',
+            excludeIds,
         );
 
         // Start RAF loop

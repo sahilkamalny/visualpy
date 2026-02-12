@@ -169,17 +169,18 @@
         const items = Array.isArray(uiState.clipboard)
           ? uiState.clipboard
           : [uiState.clipboard];
-        for (const item of items) {
+        const clones = items.map((item) => {
           const clone = JSON.parse(JSON.stringify(item));
           reId(clone);
-          blockStore.insertBlock(clone, null);
-        }
+          return clone;
+        });
+        blockStore.insertBlocks(clones, null);
       }
     } else if (e.ctrlKey && e.key === "d") {
       e.preventDefault();
       const ids = [...uiState.selectedBlockIds];
       if (ids.length > 0) {
-        ids.forEach((id) => blockStore.duplicateBlock(id));
+        blockStore.duplicateBlocks(ids);
       }
     }
   }
