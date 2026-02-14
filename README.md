@@ -15,6 +15,11 @@
 - **🌙 Theme Support**: Automatically adapts to VS Code's dark/light theme
 - **♿ Accessible**: ARIA labels and keyboard navigation for screen readers
 
+## 📋 Requirements
+- VS Code 1.70.0 or higher
+- **Python 3.x** installed and added to your PATH
+- [Python extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python) (recommended)
+
 ## 🚀 Quick Start
 
 1. Open a Python file (`.py`)
@@ -72,6 +77,18 @@ VisualPy is perfect for:
 - **Code Understanding**: See the flow of control at a glance
 - **Rapid Prototyping**: Drag blocks faster than typing
 - **Accessibility**: Alternative interface for different learning styles
+
+## ❓ Troubleshooting
+
+### Extension not loading / Black screen
+- Ensure you have run `npm install` and `npm run compile` if running from source.
+- Check the console for errors (Help > Toggle Developer Tools).
+
+### Python not found
+- Ensure Python 3 is installed.
+- Install the official [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
+- Select your interpreter via `Python: Select Interpreter` command in VS Code.
+- Alternatively, set `visualpy.pythonPath` in your settings to the absolute path of your python executable.
 
 ## 🛠️ Development
 

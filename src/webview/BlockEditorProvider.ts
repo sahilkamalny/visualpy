@@ -151,11 +151,11 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      */
     private getWebviewContent(webview: vscode.Webview): string {
         const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'dist', 'webview.js')
+            vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.js')
         );
 
         const styleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'dist', 'webview.css')
+            vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.css')
         );
 
         const codiconsUri = webview.asWebviewUri(

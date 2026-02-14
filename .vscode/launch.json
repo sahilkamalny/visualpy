@@ -10,7 +10,11 @@
             ],
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
-            ]
+            ],
+            "env": {
+                "NODE_NO_WARNINGS": "1"
+            },
+            "preLaunchTask": "npm: watch"
         }
     ]
 }

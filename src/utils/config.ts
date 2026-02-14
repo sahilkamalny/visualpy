@@ -28,24 +28,37 @@ export async function getPythonPath(): Promise<string> {
         return configuredPath;
     }
 
-    // Try to get from Python extension
-    const pythonExtension = vscode.extensions.getExtension('ms-python.python');
-    if (pythonExtension) {
-        if (!pythonExtension.isActive) {
-            await pythonExtension.activate();
-        }
-        const pythonApi = pythonExtension.exports;
-        if (pythonApi?.settings?.getExecutionDetails) {
-            const details = pythonApi.settings.getExecutionDetails(
-                vscode.workspace.workspaceFolders?.[0]?.uri
-            );
-            if (details?.execCommand?.[0]) {
-                return details.execCommand[0];
-            }
-        }
+    // Check standard python extension setting
+    const pythonConfig = vscode.workspace.getConfiguration('python');
+    const defaultInterpreterPath = pythonConfig.get<string>('defaultInterpreterPath');
+    if (defaultInterpreterPath && defaultInterpreterPath !== 'python') {
+        return defaultInterpreterPath;
     }
 
-    // Fallback to 'python' or 'python3'
+    // Try to get from Python extension API
+    try {
+        const pythonExtension = vscode.extensions.getExtension('ms-python.python');
+        if (pythonExtension) {
+            if (!pythonExtension.isActive) {
+                await pythonExtension.activate();
+            }
+            const pythonApi = pythonExtension.exports;
+            if (pythonApi?.settings?.getExecutionDetails) {
+                const details = pythonApi.settings.getExecutionDetails(
+                    vscode.workspace.workspaceFolders?.[0]?.uri
+                );
+                if (details?.execCommand?.[0]) {
+                    return details.execCommand[0];
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to get python path from extension API', error);
+    }
+
+    // Fallback based on platform, but check if it exists first?
+    // For now, return standard 'python' or 'python3' to let spawn try it.
+    // If spawn fails, PythonParserService handles it.
     return process.platform === 'win32' ? 'python' : 'python3';
 }
 

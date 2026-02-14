@@ -123,12 +123,14 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "webpack --mode production",
-    "watch": "webpack --mode development --watch",
-    "dev": "webpack --mode development",
+    "compile": "npm run build:webview && webpack --mode production",
+    "watch": "npm run build:webview && webpack --mode development --watch",
+    "dev": "npm run build:webview && webpack --mode development",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
-    "package": "vsce package"
+    "test": "npm run build:webview && node ./out/test/runTest.js",
+    "package": "vsce package",
+    "build:webview": "npm run build --prefix webview",
+    "postinstall": "npm install --prefix webview"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
