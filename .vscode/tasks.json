@@ -2,8 +2,11 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "npm",
-            "script": "watch",
+            "label": "Watch Extension",
+            "type": "shell",
+            "command": "npm run watch:extension",
+            "isBackground": true,
+            "group": "build",
             "problemMatcher": {
                 "owner": "typescript",
                 "fileLocation": [
@@ -11,28 +14,55 @@
                     "${workspaceFolder}"
                 ],
                 "pattern": {
-                    "regexp": "^([^\\s].*)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\):\\s+(error|warning|info)\\s+(TS\\d+)\\s*:\\s*(.*)$",
-                    "file": 1,
-                    "location": 2,
-                    "severity": 3,
-                    "code": 4,
-                    "message": 5
+                    "regexp": "^ERROR\\s+in\\s+(.*)$",
+                    "message": 1
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "Compiler starting...",
-                    "endsPattern": "Compiler is watching files for updates..."
+                    "beginsPattern": ".*webpack.*",
+                    "endsPattern": ".*compiled successfully.*"
                 }
             },
-            "isBackground": true,
             "presentation": {
                 "reveal": "never"
+            }
+        },
+        {
+            "label": "Watch Webview",
+            "type": "shell",
+            "command": "npm run watch:webview",
+            "isBackground": true,
+            "group": "build",
+            "problemMatcher": {
+                "owner": "svelte",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    "regexp": "^ERROR\\s+(.*)$",
+                    "message": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*building.*",
+                    "endsPattern": ".*built in.*"
+                }
             },
+            "presentation": {
+                "reveal": "never"
+            }
+        },
+        {
+            "label": "Watch All",
+            "dependsOn": [
+                "Watch Extension",
+                "Watch Webview"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
-            "label": "npm: watch"
+            }
         },
         {
             "type": "npm",
