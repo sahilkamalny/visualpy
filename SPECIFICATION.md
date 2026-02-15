@@ -2,7 +2,7 @@
 
 ## Specification Document v1.0
 
-> **Purpose**: This document serves as the complete technical specification for building VisualPy, a VS Code extension that provides bidirectional conversion between Python code and Scratch-like visual programming blocks. This document is designed to be comprehensive enough for an AI agent to implement the entire project without ambiguity.
+> **Purpose**: This document serves as the complete technical specification for building VisualPy, a VS Code extension that provides bidirectional conversion between Python code and Scratch-like visual programming blocks.
 
 ---
 
@@ -1298,14 +1298,6 @@ interface IfBlock extends Block {
 --visualpy-selected-shadow: 0 0 0 2px var(--visualpy-focus);
 --visualpy-drag-opacity: 0.8;
 ```
-
----
-
-## Document Revision History
-
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2026-02-06 | AI Agent | Initial specification |
 
 ---
 

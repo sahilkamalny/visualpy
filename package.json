@@ -124,7 +124,9 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "npm run build:webview && webpack --mode production",
-    "watch": "npm run build:webview && webpack --mode development --watch",
+    "watch": "npm run build:webview && concurrently \"npm:watch:extension\" \"npm:watch:webview\" --names \"EXT,WEB\" --prefix-colors \"blue,green\"",
+    "watch:extension": "webpack --mode development --watch",
+    "watch:webview": "npm run dev --prefix webview",
     "dev": "npm run build:webview && webpack --mode development",
     "lint": "eslint src --ext ts",
     "test": "npm run build:webview && node ./out/test/runTest.js",
@@ -141,6 +143,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "@vscode/test-electron": "^2.3.0",
     "@vscode/vsce": "^2.21.0",
+    "concurrently": "^9.2.1",
     "copy-webpack-plugin": "^11.0.0",
     "eslint": "^8.45.0",
     "glob": "^10.0.0",

@@ -1,0 +1,39 @@
+﻿commit a1a9b3f31c1205feca1a456930b1febba1e95145
+Author: Sahil Kamal <sahilkamal.dev@gmail.com>
+Date:   Fri Feb 13 23:44:46 2026 -0500
+
+    Fix: webview build and launch config setup
+    
+    Auto-build webview on install/compile. Correctly launch extension via F5. Improved python interpreter finding logic.
+
+commit e4431932b00d78b6a7519a6d93462c7843a69ba0
+Author: Sahil Kamal <sahilkamal.dev@gmail.com>
+Date:   Thu Feb 12 05:10:37 2026 -0500
+
+    Fix: zoom handling, palette icons, and error toast
+    
+    Fixed snap grid alignment issues when zooming during a drag operation. Reverted previous zoom offset calculation in favor of direct DOM scale reading. Added Toast component to display syntax errors non-destructively instead of resetting the editor.
+
+commit 328b4ba009a0a30b9fd89335714a899695994cdc
+Author: Sahil Kamal <sahilkamal.dev@gmail.com>
+Date:   Thu Feb 12 02:56:35 2026 -0500
+
+    Bug fix: zoom reset on update
+    
+    Fixed a bug where the default zoom setting would be re-applied on every code update.
+
+commit a571fc16f03663fa91299ac2a70b5fbd8ef8a8b4
+Author: Sahil Kamal <sahilkamal.dev@gmail.com>
+Date:   Thu Feb 12 02:17:37 2026 -0500
+
+    Updated drag snap lines to respect zoom scale
+    
+    Updated the calculation of drag snap lines to respect the current zoom scale,. Scaled the indicator's thickness and margins inversely to maintain a consistent visual appearance regardless of the zoom level.
+
+commit 3d725ec0896bddfb9eb9e4def04bc64a31343620
+Author: Sahil Kamal <sahilkamal.dev@gmail.com>
+Date:   Thu Feb 12 02:07:15 2026 -0500
+
+    Introduced multi-block selection ghost effect
+    
+    Introduced a ghost effect while dragging a multi-block selection within the extension window.

@@ -8,7 +8,10 @@ export default defineConfig({
     ],
     build: {
         outDir: 'dist',
-        emptyOutDir: true,
+        emptyOutDir: false,
+        watch: {
+            include: 'src/**'
+        },
         // Build as IIFE for VS Code webview (no ES modules)
         lib: {
             entry: resolve(__dirname, 'src/main.ts'),

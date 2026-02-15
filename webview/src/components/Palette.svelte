@@ -56,29 +56,29 @@
     aria-label="Block palette"
 >
     <div class="vp-palette-header">
-        <span class="vp-palette-title">Blocks</span>
-        <div class="vp-palette-search">
-            <input
-                type="text"
-                placeholder="Search blocks…"
-                bind:value={searchQuery}
-                class="vp-search-input"
-                onkeydown={(e) => e.stopPropagation()}
-            />
-            {#if searchQuery}
-                <button
-                    class="vp-search-clear"
-                    onclick={() => (searchQuery = "")}>✕</button
-                >
-            {/if}
-        </div>
+        <span class="vp-palette-title">Block Library</span>
         <button
             class="vp-palette-collapse-btn"
             onclick={() => uiState.togglePalette()}
             title="Collapse Sidebar"
         >
-            ‹‹
+            ‹
         </button>
+    </div>
+
+    <div class="vp-palette-search">
+        <input
+            type="text"
+            placeholder="Search blocks…"
+            bind:value={searchQuery}
+            class="vp-search-input"
+            onkeydown={(e) => e.stopPropagation()}
+        />
+        {#if searchQuery}
+            <button class="vp-search-clear" onclick={() => (searchQuery = "")}
+                >✕</button
+            >
+        {/if}
     </div>
 
     <!-- Poking out button when collapsed -->
@@ -142,9 +142,9 @@
 
 <style>
     .vp-palette {
-        width: 220px;
-        min-width: 220px;
-        background: color-mix(in srgb, var(--vp-bg) 97%, white 3%);
+        width: 240px; /* Slightly wider for better readability */
+        min-width: 240px;
+        background: var(--vp-bg);
         border-right: 1px solid var(--vp-border);
         display: flex;
         flex-direction: column;
@@ -170,11 +170,12 @@
     }
 
     .vp-palette-header {
-        padding: 10px 12px;
+        padding: 12px 16px;
         border-bottom: 1px solid var(--vp-border);
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
+        background: var(--vp-bg);
     }
 
     .vp-palette-title {
@@ -182,10 +183,10 @@
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        opacity: 0.6;
-        display: block;
-        margin-bottom: 0; /* Adjusted from 8px to fit row */
+        color: var(--vp-fg);
+        opacity: 0.7;
         flex: 1;
+        margin: 0;
     }
 
     /* Collapse button in header */
@@ -193,15 +194,14 @@
         background: none;
         border: none;
         color: var(--vp-fg);
-        opacity: 0.6;
+        opacity: 0.5;
         cursor: pointer;
-        font-size: 18px;
-        line-height: 1;
-        padding: 0 4px;
-        border-radius: 3px;
+        padding: 4px;
+        border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: all var(--vp-transition-fast);
     }
     .vp-palette-collapse-btn:hover {
         opacity: 1;
@@ -212,12 +212,12 @@
     .vp-palette-expand-btn {
         position: absolute;
         left: 0;
-        top: 10px;
+        top: 12px;
         z-index: 100;
         background: var(--vp-bg);
         border: 1px solid var(--vp-border);
         border-left: none; /* Make it look attached */
-        border-radius: 0 6px 6px 0;
+        border-radius: 0 4px 4px 0;
         width: 24px;
         height: 32px;
         display: none; /* Hidden by default */
@@ -225,8 +225,8 @@
         justify-content: center;
         cursor: pointer;
         color: var(--vp-fg);
-        font-size: 18px;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        font-size: 16px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
     }
     .vp-palette-expand-btn:hover {
         background: var(--vp-hover);
@@ -237,25 +237,25 @@
     }
 
     .vp-palette-search {
+        padding: 12px 16px 12px;
         position: relative;
-        /* flex: 1;  Removed flex:1 so title can take space or share */
-        width: 120px; /* Fixed width for search to fit title + btn */
     }
 
     .vp-search-input {
         width: 100%;
-        padding: 5px 8px;
+        padding: 6px 10px;
         font-family: inherit;
         font-size: 12px;
         background: var(--vp-input-bg);
         color: var(--vp-input-fg);
-        border: 1px solid var(--vp-input-border);
+        border: 1px solid transparent; /* Cleaner look */
         border-radius: var(--vp-radius-sm);
-        cursor: text; /* Changed from grab */
-        transition: border-color var(--vp-transition-fast);
+        transition: all var(--vp-transition-fast);
     }
     .vp-search-input:focus {
+        background: var(--vp-input-bg);
         border-color: var(--vp-focus);
+        box-shadow: 0 0 0 1px var(--vp-focus);
     }
     .vp-search-input::placeholder {
         opacity: 0.4;
@@ -263,35 +263,36 @@
 
     .vp-search-clear {
         position: absolute;
-        right: 4px;
-        top: 50%;
-        transform: translateY(-50%);
+        right: 24px;
+        top: 6px; /* Adjusted for new padding */
         background: none;
         border: none;
         color: var(--vp-fg);
-        opacity: 0.5;
+        opacity: 0.4;
         cursor: pointer;
-        font-size: 10px;
-        padding: 2px 4px;
-        border-radius: 3px;
+        font-size: 12px;
+        padding: 6px;
     }
     .vp-search-clear:hover {
-        opacity: 1;
-        background: var(--vp-hover);
+        opacity: 0.8;
     }
 
     .vp-palette-list {
         flex: 1;
         overflow-y: auto;
-        padding: 6px 0;
+        padding: 0 0 16px;
+    }
+
+    .vp-palette-category {
+        margin-bottom: 2px;
     }
 
     .vp-palette-category-header {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         width: 100%;
-        padding: 6px 12px;
+        padding: 8px 16px;
         background: none;
         border: none;
         color: var(--vp-fg);
@@ -299,19 +300,24 @@
         font-family: inherit;
         font-size: 11px;
         font-weight: 600;
-        text-transform: capitalize;
+        text-transform: uppercase;
+        opacity: 0.8;
+        letter-spacing: 0.5px;
         transition: background var(--vp-transition-fast);
+        user-select: none;
     }
     .vp-palette-category-header:hover {
         background: var(--vp-hover);
+        opacity: 1;
     }
 
     .vp-category-indicator {
-        width: 8px;
-        height: 8px;
-        border-radius: 3px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%; /* Dot instead of square */
         background: var(--cat-color);
         flex-shrink: 0;
+        opacity: 0.8;
     }
 
     .vp-category-name {
@@ -320,8 +326,8 @@
     }
 
     .vp-category-chevron {
-        font-size: 14px;
-        opacity: 0.5;
+        font-size: 12px;
+        opacity: 0.4;
         transition: transform var(--vp-transition);
         transform: rotate(0deg);
     }
@@ -330,17 +336,17 @@
     }
 
     .vp-palette-items {
-        padding: 2px 8px 6px;
+        padding: 4px 12px 8px 24px; /* Indented more */
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
         animation: vp-slide-down 150ms ease;
     }
 
     .vp-palette-item {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         padding: 6px 10px;
         border-radius: var(--vp-radius-sm);
         cursor: grab;
@@ -350,25 +356,50 @@
         font-size: 12px;
         user-select: none;
         -webkit-user-select: none;
+        position: relative;
+        overflow: hidden;
     }
+
+    /* Accent strip on hover */
+    .vp-palette-item::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--block-color);
+        opacity: 0;
+        transition: opacity var(--vp-transition-fast);
+    }
+
     .vp-palette-item:hover {
-        background: color-mix(in srgb, var(--block-color) 15%, transparent);
-        border-color: color-mix(in srgb, var(--block-color) 30%, transparent);
+        background: var(--vp-hover);
     }
+    .vp-palette-item:hover::before {
+        opacity: 1;
+    }
+
     .vp-palette-item:active {
-        transform: scale(0.97);
+        transform: scale(0.98);
         cursor: grabbing;
     }
 
     .vp-palette-icon {
         font-size: 14px;
-        width: 20px;
+        width: 18px;
         text-align: center;
         flex-shrink: 0;
+        opacity: 0.7;
+        color: var(--block-color);
+    }
+    .vp-palette-item:hover .vp-palette-icon {
+        opacity: 1;
     }
 
     .vp-palette-label {
         font-size: 12px;
         flex: 1;
+        opacity: 0.9;
     }
 </style>
