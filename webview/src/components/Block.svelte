@@ -234,17 +234,17 @@
         background: color-mix(in srgb, #ef4444 5%, var(--vp-bg));
     }
 
-    /* Cursor-highlight state: subtle glow using the block's own color */
+    /* Cursor-highlight state: smooth indent to show active block */
     .vp-block.cursor-highlight {
-        border-color: var(--block-color);
-        box-shadow:
-            0 0 0 1px color-mix(in srgb, var(--block-color) 40%, transparent),
-            0 0 12px 2px color-mix(in srgb, var(--block-color) 20%, transparent);
+        transform: translateX(12px);
+        border-color: color-mix(in srgb, var(--block-color) 60%, transparent);
+        box-shadow: var(--vp-shadow-md);
         z-index: 1;
     }
     .vp-block.cursor-highlight > .vp-accent-strip {
-        box-shadow: 0 0 6px
-            color-mix(in srgb, var(--block-color) 50%, transparent);
+        width: 5px;
+        box-shadow: 0 0 8px
+            color-mix(in srgb, var(--block-color) 40%, transparent);
     }
 
     /* Accent Strip */
