@@ -14,6 +14,9 @@ class UIStateStore {
     ctrlPressed = $state(false);
     paletteCollapsed = $state(false);
 
+    // Cursor-to-block highlight: purely visual, separate from selection
+    cursorHighlightId = $state<string | null>(null);
+
     // Context menu
     contextMenu = $state<{
         visible: boolean;
@@ -119,6 +122,11 @@ class UIStateStore {
         } else if (status === 'synced') {
             this.hideToast();
         }
+    }
+
+    /** Set the cursor-highlighted block (visual only, does not affect selection) */
+    setCursorHighlight(id: string | null): void {
+        this.cursorHighlightId = id;
     }
 
     setFileName(name: string): void {

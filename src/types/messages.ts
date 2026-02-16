@@ -24,7 +24,8 @@ export type ExtensionMessage =
     | { type: 'SYNC_STATUS'; payload: { status: SyncStatus; message?: string } }
     | { type: 'THEME_CHANGED'; payload: { theme: Theme } }
     | { type: 'CONFIG_CHANGED'; payload: { config: Partial<Config> } }
-    | { type: 'PARSE_ERROR'; payload: { message: string; line?: number } };
+    | { type: 'PARSE_ERROR'; payload: { message: string; line?: number } }
+    | { type: 'CURSOR_HIGHLIGHT'; payload: { line: number | null } };
 
 // Webview → Extension messages
 export type WebviewMessage =

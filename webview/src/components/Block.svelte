@@ -17,6 +17,9 @@
     const colors = $derived(BLOCK_COLORS[block.category] || BLOCK_COLORS.misc);
     const icon = $derived(BLOCK_ICONS[block.type] || "📦");
     const isSelected = $derived(uiState.selectedBlockIds.includes(block.id));
+    const isCursorHighlighted = $derived(
+        uiState.cursorHighlightId === block.id,
+    );
 
     const hasChildren = $derived(!!block.children && block.children.length > 0);
     const isCollapsed = $derived(block.metadata?.collapsed ?? false);
@@ -92,6 +95,7 @@
 <div
     class="vp-block"
     class:selected={isSelected}
+    class:cursor-highlight={isCursorHighlighted && !isSelected}
     class:has-error={hasError}
     data-block-id={block.id}
     data-block-type={block.type}
@@ -228,6 +232,19 @@
     .vp-block.has-error {
         border-color: #ef4444;
         background: color-mix(in srgb, #ef4444 5%, var(--vp-bg));
+    }
+
+    /* Cursor-highlight state: subtle glow using the block's own color */
+    .vp-block.cursor-highlight {
+        border-color: var(--block-color);
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--block-color) 40%, transparent),
+            0 0 12px 2px color-mix(in srgb, var(--block-color) 20%, transparent);
+        z-index: 1;
+    }
+    .vp-block.cursor-highlight > .vp-accent-strip {
+        box-shadow: 0 0 6px
+            color-mix(in srgb, var(--block-color) 50%, transparent);
     }
 
     /* Accent Strip */

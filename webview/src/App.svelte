@@ -20,6 +20,26 @@
   let receivingFromHost = false;
 
   // --- Extension host message handler ---
+
+  // Find the deepest block whose sourceRange contains the given 1-based line.
+  function findBlockAtLine(blocks: Block[], line: number): Block | null {
+    for (const block of blocks) {
+      const sr = block.metadata?.sourceRange;
+      if (sr && line >= sr.startLine && line <= sr.endLine) {
+        if (block.children) {
+          const child = findBlockAtLine(block.children, line);
+          if (child) return child;
+        }
+        if (block.attachments) {
+          const att = findBlockAtLine(block.attachments, line);
+          if (att) return att;
+        }
+        return block;
+      }
+    }
+    return null;
+  }
+
   onMessage((message) => {
     receivingFromHost = true;
     try {
@@ -51,10 +71,22 @@
           );
           break;
 
-        case "PARSE_ERROR":
-          // Show error toast, do NOT update blocks
-          uiState.setSyncStatus("error", message.payload.message);
+        case "PARSE_ERROR": {
+          const firstError = message.payload.errors[0];
+          uiState.setSyncStatus("error", firstError.message);
           break;
+        }
+
+        case "CURSOR_HIGHLIGHT": {
+          const line = message.payload.line;
+          if (line == null) {
+            uiState.setCursorHighlight(null);
+          } else {
+            const found = findBlockAtLine(blockStore.blocks, line);
+            uiState.setCursorHighlight(found?.id ?? null);
+          }
+          break;
+        }
       }
     } finally {
       lastBlocksJson = JSON.stringify(blockStore.blocks);

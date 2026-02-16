@@ -22,6 +22,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     private syncStatus: SyncStatus = 'synced';
     private isUpdatingCode = false;
     private _lastSyncedCode = '';
+    private _lastHighlightedLine: number | null = null;
     private disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -63,6 +64,20 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             vscode.workspace.onDidChangeConfiguration(event => {
                 if (event.affectsConfiguration('visualpy')) {
                     this.sendConfigUpdate();
+                }
+            })
+        );
+
+        // Listen for cursor position changes (for cursor-to-block highlight)
+        this.disposables.push(
+            vscode.window.onDidChangeTextEditorSelection(event => {
+                const doc = event.textEditor.document;
+                const isPython = doc.languageId === 'python';
+                const docMatch = doc === this.currentDocument;
+                const hasPanel = !!(this.panel || this.view);
+                Logger.info(`[CursorHighlight] Selection changed: lang=${doc.languageId}, docMatch=${docMatch}, hasPanel=${hasPanel}, blocksCount=${this.blocks.length}, file=${doc.fileName}`);
+                if (docMatch) {
+                    this.handleCursorMove(event.textEditor);
                 }
             })
         );
@@ -446,6 +461,25 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         }
         return text;
     }
+
+    /**
+     * Handle cursor movement — send cursor line to webview for block highlight.
+     * Debounced at 50ms.
+     */
+    private handleCursorMove = debounce((editor: vscode.TextEditor) => {
+        // VS Code lines are 0-based, our sourceRange is 1-based
+        const cursorLine = editor.selection.active.line + 1;
+
+        // Deduplicate: don't send if cursor line hasn't changed
+        if (cursorLine === this._lastHighlightedLine) return;
+        this._lastHighlightedLine = cursorLine;
+
+        Logger.info(`[CursorHighlight] Sending line: ${cursorLine}`);
+        this.sendMessage({
+            type: 'CURSOR_HIGHLIGHT',
+            payload: { line: cursorLine }
+        });
+    }, 50);
 
     /**
      * Dispose of resources
