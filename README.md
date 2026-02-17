@@ -9,9 +9,10 @@
 Works seamlessly with:
 - **VS Code** (v1.70.0+)
 - **Cursor**
-- **Google Antigravity**
 - **Windsurf**
+- **Google Antigravity**
 - **VSCodium**
+- **& other VS Code-based IDEs**
 
 ## ✨ Features
 
@@ -40,8 +41,6 @@ Works seamlessly with:
 - **VS Code**: Version 1.70.0 or higher.
 - **Python**: Python 3.x installed and added to your PATH.
 - **Recommended**: [Python extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
-
-> **Note:** End users do **not** need Node.js installed to use the extension.
 
 ## 📦 Supported Python Constructs
 
