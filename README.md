@@ -17,7 +17,7 @@ Works seamlessly with:
 ## ✨ Features
 
 - **🔄 Bidirectional Sync**: Seamlessly convert between Python code and visual blocks. Changes in one update the other.
-- **📍 Interactive Cursor Sync**: Click a line in your code, and the corresponding block indents and scrolls into view automatically.
+- **📍 Interactive Cursor Sync**: Click a line in your code and the corresponding block is focused into view.
 - **🎨 Modern Block Palette**: A beautiful, color-coded palette for all standard Python constructs.
 - **⚡ Smart Features**:
     - **Undo/Redo**: Full history support with `Ctrl+Z` / `Ctrl+Y`.
