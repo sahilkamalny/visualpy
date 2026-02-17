@@ -55,6 +55,7 @@
             blockStore.reconcileBlocks(message.payload.blocks);
           }
           uiState.setFileName(message.payload.fileName);
+          hostUpdateTime = Date.now();
           break;
 
         case "UPDATE_BLOCKS":
@@ -62,6 +63,7 @@
           if (message.payload.fileName) {
             uiState.setFileName(message.payload.fileName);
           }
+          hostUpdateTime = Date.now();
           break;
 
         case "SYNC_STATUS":
@@ -102,8 +104,15 @@
   });
 
   // --- Auto-save: debounced sync to host ---
+  // Suppress auto-save for a short window after blocks arrive from the host
+  // to prevent the reverse sync race condition during rapid text editor edits.
+  let hostUpdateTime = 0;
+  const HOST_UPDATE_GRACE_MS = 500;
+
   const triggerAutoSave = debounce(() => {
     if (uiState.autoSave && dragState.data.phase === "idle") {
+      // Don't sync back to code if blocks just came from the host
+      if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
       uiState.setSyncStatus("syncing");
       send({
         type: "REQUEST_SYNC",
@@ -121,6 +130,10 @@
       lastBlocksJson = json;
 
       if (!initialized || receivingFromHost) return;
+
+      // Don't echo blocks back when they just arrived from the host
+      // (reconcileBlocks can mutate IDs, causing the JSON to differ)
+      if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
 
       saveState({ blocks: blockStore.blocks, zoom: uiState.zoomLevel });
       send({ type: "BLOCKS_CHANGED", payload: { blocks: blockStore.blocks } });

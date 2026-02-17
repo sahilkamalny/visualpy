@@ -268,8 +268,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 this.sendMessage({
                     type: 'PARSE_ERROR',
                     payload: {
-                        message: error.message || 'Syntax error',
-                        line: error.lineno || undefined
+                        errors: [{ message: error.message || 'Syntax error', line: error.lineno || 0 }]
                     }
                 });
                 return;
@@ -302,8 +301,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             this.sendMessage({
                 type: 'PARSE_ERROR',
                 payload: {
-                    message: error.message || 'Syntax error in Python code',
-                    line: error.lineNumber
+                    errors: [{ message: error.message || 'Syntax error in Python code', line: (error as any).lineNumber || 0 }]
                 }
             });
         }
