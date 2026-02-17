@@ -144,8 +144,8 @@ If you are actively modifying the code, you can enable watch mode to auto-rebuil
 - If the issue persists, try running `npm run dev` manually in the terminal to ensure a clean build.
 - Check the console for errors (Help > Toggle Developer Tools).
 
-### "Extension is already running"
-- This usually happens if you try to launch (F5) while a watch task is running in the background. Kill any running terminals and try again.
+### "Extension is already running / Waiting for preLaunchTask 'Builad All'"
+- This usually happens if you try to launch (F5) while a watch task is running in the background. Kill any running terminals and try again or press `Debug Anyway`.
 
 ## 📄 License
 

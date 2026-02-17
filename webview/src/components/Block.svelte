@@ -204,18 +204,20 @@
     }
 
     .vp-block:not(.selected):hover {
-        border-color: var(--vp-focus); /* Subtle hover highlight */
+        border-color: var(
+            --block-color
+        ); /* Subtle hover highlight matching block color */
         box-shadow: var(--vp-shadow-md);
         z-index: 1; /* Slight lift */
     }
 
     /* Base selected state (only when NOT cursor-highlighted) */
     .vp-block.selected {
-        border-color: var(--vp-focus);
-        --selected-shadow: 0 0 0 1px var(--vp-focus),
-            0 0 15px 1px color-mix(in srgb, var(--vp-focus) 30%, transparent);
+        border-color: var(--block-color);
+        --selected-shadow: 0 0 0 1px var(--block-color),
+            0 0 15px 1px color-mix(in srgb, var(--block-color) 30%, transparent);
         /* Slightly weaker shadow for indented state to compensate for perceptual intensity */
-        --selected-shadow-indented: 0 0 0 1px var(--vp-focus),
+        --selected-shadow-indented: 0 0 0 1px var(--block-color),
             0 0 15px 1px transparent;
         box-shadow: var(--selected-shadow);
         z-index: 2;
@@ -231,7 +233,7 @@
     .vp-block.selected > .vp-block-content > .vp-block-header {
         background: linear-gradient(
             90deg,
-            color-mix(in srgb, var(--vp-focus) 15%, transparent) 0%,
+            color-mix(in srgb, var(--block-color) 15%, transparent) 0%,
             transparent 100%
         );
     }
