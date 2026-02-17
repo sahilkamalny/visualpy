@@ -95,7 +95,7 @@
 <div
     class="vp-block"
     class:selected={isSelected}
-    class:cursor-highlight={isCursorHighlighted && !isSelected}
+    class:cursor-highlight={isCursorHighlighted}
     class:has-error={hasError}
     data-block-id={block.id}
     data-block-type={block.type}
@@ -245,6 +245,24 @@
         width: 5px;
         box-shadow: 0 0 8px
             color-mix(in srgb, var(--block-color) 40%, transparent);
+    }
+
+    /* FIX: Ensure transform applies even when selected */
+    /* FIX: Ensure transform applies even when selected */
+    .vp-block.selected.cursor-highlight {
+        transform: translateX(12px);
+        z-index: 3; /* Lift above standard selected blocks */
+        /* Preserve the strong selected shadow, optionally adding a bit more depth from highlight */
+        box-shadow:
+            0 0 0 1px var(--vp-focus),
+            0 0 15px 2px color-mix(in srgb, var(--vp-focus) 40%, transparent),
+            var(--vp-shadow-lg);
+    }
+
+    /* FIX: Ensure accent strip retains selected width/glow when highlighted */
+    .vp-block.selected.cursor-highlight > .vp-accent-strip {
+        width: 6px;
+        box-shadow: 0 0 8px var(--block-color);
     }
 
     /* Accent Strip */

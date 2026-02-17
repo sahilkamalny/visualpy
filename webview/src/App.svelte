@@ -83,7 +83,14 @@
             uiState.setCursorHighlight(null);
           } else {
             const found = findBlockAtLine(blockStore.blocks, line);
-            uiState.setCursorHighlight(found?.id ?? null);
+            const id = found?.id ?? null;
+            uiState.setCursorHighlight(id);
+            if (id) {
+              requestAnimationFrame(() => {
+                const el = document.querySelector(`[data-block-id="${id}"]`);
+                el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              });
+            }
           }
           break;
         }
@@ -180,7 +187,7 @@
     } else if (e.key === "+" || e.key === "=") {
       e.preventDefault();
       uiState.zoomIn();
-    } else if (e.key === "-") {
+    } else if (e.key === "-" || e.key === "_") {
       e.preventDefault();
       uiState.zoomOut();
     } else if (e.key === "0") {
@@ -195,6 +202,7 @@
       refocusCanvas();
     } else if (e.key === "Escape") {
       uiState.hideContextMenu();
+      uiState.clearSelection();
     } else if (e.ctrlKey && e.key === "c") {
       e.preventDefault();
       const ids = [...uiState.selectedBlockIds];
