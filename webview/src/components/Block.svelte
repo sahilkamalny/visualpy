@@ -198,6 +198,9 @@
         cursor: default;
         animation: vp-scale-in 200ms ease backwards;
         overflow: hidden; /* contain the accent strip */
+        /* Force hardware acceleration/layer promotion to match highlighted state */
+        transform: translateZ(0);
+        will-change: transform;
     }
 
     .vp-block:not(.selected):hover {
@@ -206,11 +209,15 @@
         z-index: 1; /* Slight lift */
     }
 
+    /* Base selected state (only when NOT cursor-highlighted) */
     .vp-block.selected {
         border-color: var(--vp-focus);
-        box-shadow:
-            0 0 0 1px var(--vp-focus),
+        --selected-shadow: 0 0 0 1px var(--vp-focus),
             0 0 15px 1px color-mix(in srgb, var(--vp-focus) 30%, transparent);
+        /* Slightly weaker shadow for indented state to compensate for perceptual intensity */
+        --selected-shadow-indented: 0 0 0 1px var(--vp-focus),
+            0 0 15px 1px transparent;
+        box-shadow: var(--selected-shadow);
         z-index: 2;
     }
 
@@ -249,14 +256,13 @@
 
     /* FIX: Ensure transform applies even when selected */
     /* FIX: Ensure transform applies even when selected */
+    /* FIX: Ensure transform applies even when selected */
     .vp-block.selected.cursor-highlight {
         transform: translateX(12px);
-        z-index: 3; /* Lift above standard selected blocks */
-        /* Preserve the strong selected shadow, optionally adding a bit more depth from highlight */
-        box-shadow:
-            0 0 0 1px var(--vp-focus),
-            0 0 15px 2px color-mix(in srgb, var(--vp-focus) 40%, transparent),
-            var(--vp-shadow-lg);
+        /* Match selected z-index exactly to prevent shadow popping over neighbors */
+        z-index: 2;
+        /* Use the slightly weaker shadow to match perception */
+        box-shadow: var(--selected-shadow-indented);
     }
 
     /* FIX: Ensure accent strip retains selected width/glow when highlighted */

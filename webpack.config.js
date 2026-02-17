@@ -33,8 +33,7 @@ const extensionConfig = {
     plugins: [
         new CopyPlugin({
             patterns: [
-                { from: 'resources', to: 'resources' },
-                { from: 'webview/dist', to: 'webview', noErrorOnMissing: true }
+                { from: 'resources', to: 'resources' }
             ]
         })
     ],

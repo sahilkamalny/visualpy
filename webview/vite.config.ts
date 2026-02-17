@@ -7,8 +7,8 @@ export default defineConfig({
         svelte(),
     ],
     build: {
-        outDir: 'dist',
-        emptyOutDir: false,
+        outDir: resolve(__dirname, '../dist/webview'),
+        emptyOutDir: true,
         watch: {
             include: 'src/**'
         },
