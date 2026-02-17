@@ -16,6 +16,9 @@ const MAX_HISTORY = 50;
 
 class BlockStoreImpl {
     blocks = $state<Block[]>([]);
+
+    /** Tracks the field currently being edited so reconcileBlocks skips it */
+    activeEditField: { blockId: string; fieldId: string } | null = null;
     private _past = $state<string[]>([]);
     private _future = $state<string[]>([]);
     private _pendingSnapshot: string | null = null;
@@ -338,6 +341,29 @@ class BlockStoreImpl {
         }
     }
 
+    /**
+     * Update a field value in-place WITHOUT triggering a reactive re-render.
+     * Used during active typing to avoid clobbering the DOM input.
+     */
+    updateFieldQuiet(blockId: string, fieldId: string, value: string): void {
+        const block = this.findBlock(blockId);
+        if (!block) return;
+        const field = block.content.editable?.find(f => f.id === fieldId);
+        if (field) {
+            this.commitSnapshot();
+            field.value = value;
+            // Do NOT reassign this.blocks — no reactive re-render
+        }
+    }
+
+    /**
+     * Trigger a deferred reactive update after quiet field mutations.
+     * Called from a debounce timer or on blur.
+     */
+    flushFieldUpdate(): void {
+        this.blocks = [...this.blocks];
+    }
+
     toggleCollapse(id: string): void {
         const block = this.findBlock(id);
         if (block) {
@@ -395,6 +421,17 @@ class BlockStoreImpl {
                 if (oldBlock.metadata?.collapsed !== undefined) {
                     if (!newBlock.metadata) newBlock.metadata = {} as any;
                     newBlock.metadata.collapsed = oldBlock.metadata.collapsed;
+                }
+
+                // Preserve the value of any field currently being edited.
+                // This prevents the sync roundtrip from clobbering in-flight keystrokes.
+                if (this.activeEditField && oldBlock.id === this.activeEditField.blockId) {
+                    const editingFieldId = this.activeEditField.fieldId;
+                    const oldField = oldBlock.content.editable?.find(f => f.id === editingFieldId);
+                    const newField = newBlock.content.editable?.find(f => f.id === editingFieldId);
+                    if (oldField && newField) {
+                        newField.value = oldField.value;
+                    }
                 }
 
                 // Recurse children

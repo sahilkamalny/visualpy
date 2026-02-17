@@ -4,7 +4,7 @@
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
     import { dragState } from "../lib/stores/dragState.svelte";
-    import { getBlockLabel } from "../lib/utils";
+    import { getBlockLabel, debounce } from "../lib/utils";
     import { send } from "../lib/bridge";
 
     interface Props {
@@ -63,24 +63,43 @@
         blockStore.toggleCollapse(block.id);
     }
 
+    // --- Debounced flush: propagates quiet field mutations to the reactive store ---
+    // 300ms delay keeps the store in sync without clobbering the DOM mid-keystroke.
+    const debouncedFlush = debounce(() => {
+        blockStore.flushFieldUpdate();
+    }, 300);
+
     function handleFieldInput(fieldId: string, e: Event) {
         const target = e.target as HTMLInputElement;
-        blockStore.updateField(block.id, fieldId, target.value);
+        // Quietly mutate the field value without triggering a reactive re-render.
+        // This lets the DOM <input> keep its own state during rapid typing.
+        blockStore.updateFieldQuiet(block.id, fieldId, target.value);
+        // Schedule a deferred store flush so the $effect in App.svelte
+        // picks up the change after a 300ms typing pause.
+        debouncedFlush();
     }
 
     // --- Field focus/blur for undo history ---
     // Save old value on focus; push undo on blur only if changed.
     let fieldFocusValue = "";
 
-    function handleFieldFocus(e: FocusEvent) {
+    function handleFieldFocus(fieldId: string, e: FocusEvent) {
         e.stopPropagation();
-        fieldFocusValue = (e.target as HTMLInputElement).value;
+        const target = e.target as HTMLInputElement;
+        fieldFocusValue = target.value;
+        // Mark this field as actively being edited so reconcileBlocks
+        // won't overwrite its value during sync roundtrips.
+        blockStore.activeEditField = { blockId: block.id, fieldId };
         // Save current blocks state for undo (before any typing)
         blockStore.saveSnapshot();
     }
 
     function handleFieldBlur(e: FocusEvent) {
         const newVal = (e.target as HTMLInputElement).value;
+        // Clear the active edit guard — reconcileBlocks may now overwrite freely.
+        blockStore.activeEditField = null;
+        // Immediately flush any pending quiet mutations so the store is up-to-date.
+        blockStore.flushFieldUpdate();
         if (newVal !== fieldFocusValue) {
             // Value changed during this focus session — the snapshot is
             // already saved, so the next mutation auto-committed it.
@@ -128,7 +147,7 @@
                             placeholder={field.placeholder || field.label}
                             title={field.label}
                             oninput={(e) => handleFieldInput(field.id, e)}
-                            onfocus={handleFieldFocus}
+                            onfocus={(e) => handleFieldFocus(field.id, e)}
                             onblur={handleFieldBlur}
                             onkeydown={(e) => e.stopPropagation()}
                             onclick={(e) => e.stopPropagation()}
