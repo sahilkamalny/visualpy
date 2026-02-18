@@ -20,6 +20,7 @@ const DRAG_THRESHOLD = 5; // px before drag starts
 export class DragController {
     private canvas: HTMLElement;
     private scrollContainer: HTMLElement;
+    private paletteEl: HTMLElement | null = null;
     private rafId: number | null = null;
     private dropZones: DropZone[] = [];
     private abortController: AbortController | null = null;
@@ -53,6 +54,12 @@ export class DragController {
         const { signal } = this.abortController;
 
         this.canvas.addEventListener('pointerdown', this.onPointerDown, { signal });
+
+        // Also listen on the palette for palette-initiated drags
+        this.paletteEl = document.querySelector<HTMLElement>('.vp-palette');
+        if (this.paletteEl) {
+            this.paletteEl.addEventListener('pointerdown', this.onPalettePointerDown, { signal });
+        }
     }
 
     /** Remove all event listeners. Call on component destroy. */
@@ -97,20 +104,7 @@ export class DragController {
 
         // Find the header (drag handle area)
         const header = target.closest<HTMLElement>('.vp-block-header');
-        if (!header && !target.closest<HTMLElement>('.vp-palette-item')) return;
-
-        // DO NOT preventDefault here. We want native click to fire if we don't drag.
-        // e.preventDefault(); 
-
-        // Stop propagation to prevent canvas from seeing it?
-        // Actually, canvas handles click to clear selection.
-        // Block handles click to select.
-        // If we let it bubble, Block handles it, stops propagation. Canvas never sees it.
-        // Correct.
-        // e.stopPropagation();
-
-        // Prevent text selection explicitly via API (or reliable CSS)
-        // window.getSelection()?.removeAllRanges();
+        if (!header) return;
 
         const rect = blockEl.getBoundingClientRect();
         const blockId = blockEl.dataset.blockId!;
@@ -120,28 +114,62 @@ export class DragController {
         this.originY = e.clientY;
         this.offsetX = e.clientX - rect.left;
         this.offsetY = e.clientY - rect.top;
-        this.sourceElements = [blockEl]; // Initial single source
+        this.sourceElements = [blockEl];
         this.sourceWidth = rect.width;
         this.pointerX = e.clientX;
         this.pointerY = e.clientY;
-
-        // Check if this is a palette item drag
-        const paletteItem = target.closest<HTMLElement>('[data-palette-type]');
-        const fromPalette = !!paletteItem;
-        const paletteType = paletteItem?.dataset.paletteType || null;
-        const paletteCategory = paletteItem?.dataset.paletteCategory || null;
 
         dragState.startPending(
             blockId,
             { x: e.clientX, y: e.clientY },
             { dx: this.offsetX, dy: this.offsetY },
             rect,
-            fromPalette,
+            false,
+            null,
+            null,
+        );
+
+        // Listen for move/up on window (not canvas — handles edge cases)
+        window.addEventListener('pointermove', this.onPointerMove);
+        window.addEventListener('pointerup', this.onPointerUp);
+        window.addEventListener('keydown', this.onKeyDown);
+    };
+
+    /** Palette-specific pointerdown: initiates a palette-to-canvas drag */
+    private onPalettePointerDown = (e: PointerEvent): void => {
+        if (e.button !== 0) return;
+
+        const target = e.target as HTMLElement;
+        if (target.closest('input, textarea, select, button')) return;
+
+        const paletteItem = target.closest<HTMLElement>('[data-palette-type]');
+        if (!paletteItem) return;
+
+        const rect = paletteItem.getBoundingClientRect();
+        const blockId = paletteItem.dataset.blockId || `palette-${paletteItem.dataset.paletteType}`;
+        const paletteType = paletteItem.dataset.paletteType || null;
+        const paletteCategory = paletteItem.dataset.paletteCategory || null;
+
+        this.pointerId = e.pointerId;
+        this.originX = e.clientX;
+        this.originY = e.clientY;
+        this.offsetX = e.clientX - rect.left;
+        this.offsetY = e.clientY - rect.top;
+        this.sourceElements = [paletteItem];
+        this.sourceWidth = rect.width;
+        this.pointerX = e.clientX;
+        this.pointerY = e.clientY;
+
+        dragState.startPending(
+            blockId,
+            { x: e.clientX, y: e.clientY },
+            { dx: this.offsetX, dy: this.offsetY },
+            rect,
+            true,
             paletteType,
             paletteCategory,
         );
 
-        // Listen for move/up on window (not canvas — handles edge cases)
         window.addEventListener('pointermove', this.onPointerMove);
         window.addEventListener('pointerup', this.onPointerUp);
         window.addEventListener('keydown', this.onKeyDown);
@@ -195,46 +223,47 @@ export class DragController {
         dragState.promoteToDragging();
 
         // Suppress the subsequent click event!
-        // Since we dragged, it's not a click.
-        // We add a capture-phase listener to stop it.
         const suppressClick = (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
         };
         window.addEventListener('click', suppressClick, { capture: true, once: true });
 
-        // Check for multi-selection
-        const clickedId = (this.sourceElements[0]?.dataset.blockId) || '';
-        const selection = uiState.selectedBlockIds;
+        const fromPalette = dragState.data.fromPalette;
 
-        if (selection.includes(clickedId) && selection.length > 1) {
-            // Find all selected elements
-            const allSelectedEls = selection
-                .map(id => document.querySelector(`[data-block-id="${id}"]`) as HTMLElement)
-                .filter(Boolean);
+        // For canvas blocks, check for multi-selection
+        if (!fromPalette) {
+            const clickedId = (this.sourceElements[0]?.dataset.blockId) || '';
+            const selection = uiState.selectedBlockIds;
 
-            // Filter out descendants (only keep roots)
-            // Sort by DOM order first
-            allSelectedEls.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+            if (selection.includes(clickedId) && selection.length > 1) {
+                const allSelectedEls = selection
+                    .map(id => document.querySelector(`[data-block-id="${id}"]`) as HTMLElement)
+                    .filter(Boolean);
 
-            const roots: HTMLElement[] = [];
-            for (const el of allSelectedEls) {
-                const isDescendant = roots.some(root => root.contains(el));
-                if (!isDescendant) roots.push(el);
+                allSelectedEls.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+
+                const roots: HTMLElement[] = [];
+                for (const el of allSelectedEls) {
+                    const isDescendant = roots.some(root => root.contains(el));
+                    if (!isDescendant) roots.push(el);
+                }
+                this.sourceElements = roots;
             }
-            this.sourceElements = roots;
         }
 
         if (this.sourceElements.length > 0) {
             showGhost(this.sourceElements, this.sourceWidth);
-            // Dim originals
-            this.sourceElements.forEach(el => {
-                el.style.opacity = '0.3';
-                el.style.transition = 'opacity 150ms ease';
-            });
+            // Dim originals only for canvas blocks (palette items stay visible)
+            if (!fromPalette) {
+                this.sourceElements.forEach(el => {
+                    el.style.opacity = '0.3';
+                    el.style.transition = 'opacity 150ms ease';
+                });
+            }
         }
 
-        // Capture pointer for reliable tracking (works across iframe boundaries)
+        // Capture pointer for reliable tracking
         try {
             this.canvas.setPointerCapture(this.pointerId);
         } catch {
@@ -244,7 +273,7 @@ export class DragController {
         // Determine excluded IDs (dragged blocks)
         const sourceId = dragState.data.sourceId || '';
         let excludeIds = [sourceId];
-        if (uiState.selectedBlockIds.includes(sourceId)) {
+        if (!fromPalette && uiState.selectedBlockIds.includes(sourceId)) {
             excludeIds = uiState.selectedBlockIds;
         }
 
@@ -272,7 +301,7 @@ export class DragController {
             // Rebuild drop zones with new layout
             const sourceId = dragState.data.sourceId || '';
             let excludeIds = [sourceId];
-            if (uiState.selectedBlockIds.includes(sourceId)) {
+            if (!dragState.data.fromPalette && uiState.selectedBlockIds.includes(sourceId)) {
                 excludeIds = uiState.selectedBlockIds;
             }
             this.dropZones = buildDropZoneCache(this.canvas, excludeIds);
@@ -289,13 +318,30 @@ export class DragController {
         // 2. Auto-scroll near edges
         autoScroll(this.scrollContainer, this.pointerY);
 
-        // 3. Hit-test drop zones
-        const zone = findClosestDropZone(this.dropZones, this.pointerX, this.pointerY);
+        // 3. Detect if pointer is over the palette trash zone
+        //    (only for existing canvas blocks, not palette-initiated drags)
+        if (!dragState.data.fromPalette && this.paletteEl) {
+            const paletteRect = this.paletteEl.getBoundingClientRect();
+            const isOver = (
+                this.pointerX >= paletteRect.left &&
+                this.pointerX <= paletteRect.right &&
+                this.pointerY >= paletteRect.top &&
+                this.pointerY <= paletteRect.bottom
+            );
+            if (isOver !== dragState.data.overTrash) {
+                dragState.setOverTrash(isOver);
+            }
+        }
 
-        // 4. Update drop indicator
+        // 4. Hit-test drop zones (skip if over trash)
+        const zone = dragState.data.overTrash
+            ? null
+            : findClosestDropZone(this.dropZones, this.pointerX, this.pointerY);
+
+        // 5. Update drop indicator
         this.updateDropIndicator(zone, domScale);
 
-        // 5. Update drag state (only if changed)
+        // 6. Update drag state (only if changed)
         const current = dragState.data.dropTarget;
         if (zone) {
             if (!current || current.parentId !== zone.parentId || current.index !== zone.index) {
@@ -310,7 +356,19 @@ export class DragController {
     };
 
     private commitDrop(): void {
-        const { sourceId, dropTarget, fromPalette, paletteType, paletteCategory } = dragState.data;
+        const { sourceId, dropTarget, fromPalette, paletteType, paletteCategory, overTrash } = dragState.data;
+
+        // Dropped on trash zone — delete the block(s)
+        if (overTrash && !fromPalette && sourceId) {
+            const selection = uiState.selectedBlockIds;
+            if (selection.includes(sourceId) && selection.length > 1) {
+                blockStore.removeBlocks(selection);
+            } else {
+                blockStore.removeBlocks([sourceId]);
+            }
+            uiState.clearSelection();
+            return;
+        }
 
         if (dropTarget) {
             if (fromPalette && paletteType && paletteCategory) {
@@ -324,10 +382,8 @@ export class DragController {
                 // Check if we are dragging a selected block along with others
                 const selection = uiState.selectedBlockIds;
                 if (selection.includes(sourceId) && selection.length > 1) {
-                    // Multi-move
                     blockStore.moveBlocks(selection, dropTarget.parentId, dropTarget.index);
                 } else {
-                    // Single move
                     blockStore.moveBlock(sourceId, dropTarget.parentId, dropTarget.index);
                 }
             }

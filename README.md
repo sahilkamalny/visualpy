@@ -145,7 +145,7 @@ If you are actively modifying the code, you can enable watch mode to auto-rebuil
 - Check the console for errors (Help > Toggle Developer Tools).
 
 ### "Extension is already running / Waiting for preLaunchTask 'Build All'"
-- This usually happens if you try to launch (F5) while a watch task is running in the background. Kill any running terminals and try again or press `Debug Anyway`.
+- This usually happens if you try to launch (F5) while a watch task is running in the background. Kill / abort any running terminals /tasks and try again or press `Debug Anyway`.
 
 ## 📄 License
 

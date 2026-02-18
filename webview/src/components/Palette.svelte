@@ -6,6 +6,7 @@
     } from "../lib/types";
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
+    import { dragState } from "../lib/stores/dragState.svelte";
 
     let searchQuery = $state("");
     let expandedCategories = $state<Set<string>>(
@@ -24,6 +25,14 @@
             ),
         })).filter((cat) => cat.items.length > 0),
     );
+
+    /** Show trash zone when dragging an existing canvas block (not palette-initiated) */
+    const showTrash = $derived(
+        dragState.data.phase === "dragging" && !dragState.data.fromPalette,
+    );
+
+    /** Whether the pointer is hovering over the trash zone */
+    const trashHover = $derived(dragState.data.overTrash);
 
     function toggleCategory(name: string) {
         const next = new Set(expandedCategories);
@@ -52,34 +61,103 @@
 <div
     class="vp-palette"
     class:collapsed={uiState.paletteCollapsed}
+    class:trash-mode={showTrash}
     role="complementary"
-    aria-label="Block palette"
+    aria-label={showTrash ? "Trash zone" : "Block palette"}
 >
-    <div class="vp-palette-header">
-        <span class="vp-palette-title">Block Library</span>
-        <button
-            class="vp-palette-collapse-btn"
-            onclick={() => uiState.togglePalette()}
-            title="Collapse Sidebar"
-        >
-            ‹
-        </button>
-    </div>
-
-    <div class="vp-palette-search">
-        <input
-            type="text"
-            placeholder="Search blocks…"
-            bind:value={searchQuery}
-            class="vp-search-input"
-            onkeydown={(e) => e.stopPropagation()}
-        />
-        {#if searchQuery}
-            <button class="vp-search-clear" onclick={() => (searchQuery = "")}
-                >✕</button
+    <!-- Normal palette content (hidden during trash mode) -->
+    {#if !showTrash}
+        <div class="vp-palette-header">
+            <span class="vp-palette-title">Block Library</span>
+            <button
+                class="vp-palette-collapse-btn"
+                onclick={() => uiState.togglePalette()}
+                title="Collapse Sidebar"
             >
-        {/if}
-    </div>
+                ‹
+            </button>
+        </div>
+
+        <div class="vp-palette-search">
+            <input
+                type="text"
+                placeholder="Search blocks…"
+                bind:value={searchQuery}
+                class="vp-search-input"
+                onkeydown={(e) => e.stopPropagation()}
+            />
+            {#if searchQuery}
+                <button
+                    class="vp-search-clear"
+                    onclick={() => (searchQuery = "")}>✕</button
+                >
+            {/if}
+        </div>
+
+        <div class="vp-palette-list">
+            {#each filteredCategories as category (category.name)}
+                {@const colors = getCategoryColor(category.name)}
+                <div class="vp-palette-category">
+                    <button
+                        class="vp-palette-category-header"
+                        onclick={() => toggleCategory(category.name)}
+                        style="--cat-color: {colors.primary};"
+                    >
+                        <span class="vp-category-indicator"></span>
+                        <span class="vp-category-name">{category.name}</span>
+                        <span
+                            class="vp-category-chevron"
+                            class:expanded={expandedCategories.has(
+                                category.name,
+                            )}>›</span
+                        >
+                    </button>
+
+                    {#if expandedCategories.has(category.name)}
+                        <div class="vp-palette-items">
+                            {#each category.items as item (item.type)}
+                                <div
+                                    class="vp-palette-item"
+                                    draggable="false"
+                                    data-block-id={`palette-${item.type}`}
+                                    data-palette-type={item.type}
+                                    data-palette-category={category.name}
+                                    style="--block-color: {colors.primary}; --block-accent: {colors.accent};"
+                                    role="button"
+                                    tabindex="0"
+                                    title="Click to insert, or drag to canvas"
+                                    onclick={() =>
+                                        handlePaletteItemClick(
+                                            item.type,
+                                            category.name,
+                                        )}
+                                >
+                                    <span class="vp-palette-icon"
+                                        >{item.icon}</span
+                                    >
+                                    <span class="vp-palette-label"
+                                        >{item.name}</span
+                                    >
+                                </div>
+                            {/each}
+                        </div>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    {:else}
+        <!-- Trash zone (shown during canvas-block drags) -->
+        <div class="vp-trash-zone" class:hover={trashHover}>
+            <div class="vp-trash-icon-container" class:hover={trashHover}>
+                <span class="vp-trash-icon">🗑️</span>
+            </div>
+            <span class="vp-trash-label"
+                >{trashHover
+                    ? "Release to delete"
+                    : "Drag here to delete"}</span
+            >
+        </div>
+    {/if}
 
     <!-- Poking out button when collapsed -->
     <button
@@ -90,54 +168,6 @@
     >
         ››
     </button>
-
-    <div class="vp-palette-list">
-        {#each filteredCategories as category (category.name)}
-            {@const colors = getCategoryColor(category.name)}
-            <div class="vp-palette-category">
-                <button
-                    class="vp-palette-category-header"
-                    onclick={() => toggleCategory(category.name)}
-                    style="--cat-color: {colors.primary};"
-                >
-                    <span class="vp-category-indicator"></span>
-                    <span class="vp-category-name">{category.name}</span>
-                    <span
-                        class="vp-category-chevron"
-                        class:expanded={expandedCategories.has(category.name)}
-                        >›</span
-                    >
-                </button>
-
-                {#if expandedCategories.has(category.name)}
-                    <div class="vp-palette-items">
-                        {#each category.items as item (item.type)}
-                            <div
-                                class="vp-palette-item"
-                                draggable="false"
-                                data-block-id={`palette-${item.type}`}
-                                data-palette-type={item.type}
-                                data-palette-category={category.name}
-                                style="--block-color: {colors.primary}; --block-accent: {colors.accent};"
-                                role="button"
-                                tabindex="0"
-                                title="Click to insert, or drag to canvas"
-                                onclick={() =>
-                                    handlePaletteItemClick(
-                                        item.type,
-                                        category.name,
-                                    )}
-                            >
-                                <span class="vp-palette-icon">{item.icon}</span>
-                                <span class="vp-palette-label">{item.name}</span
-                                >
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
-            </div>
-        {/each}
-    </div>
 </div>
 
 <style>
@@ -152,7 +182,9 @@
         position: relative;
         transition:
             width 200ms ease,
-            min-width 200ms ease;
+            min-width 200ms ease,
+            background 300ms ease,
+            border-color 300ms ease;
     }
 
     .vp-palette.collapsed {
@@ -167,6 +199,16 @@
         opacity: 0;
         pointer-events: none;
         transition: opacity 100ms ease;
+    }
+
+    /* Trash mode: red-tinted background */
+    .vp-palette.trash-mode {
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, #ef4444 8%, var(--vp-bg)) 0%,
+            color-mix(in srgb, #ef4444 15%, var(--vp-bg)) 100%
+        );
+        border-right-color: color-mix(in srgb, #ef4444 30%, var(--vp-border));
     }
 
     .vp-palette-header {
@@ -401,5 +443,81 @@
         font-size: 12px;
         flex: 1;
         opacity: 0.9;
+    }
+
+    /* ============================================
+       Trash Zone Styles
+       ============================================ */
+
+    .vp-trash-zone {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        animation: vp-fade-in 200ms ease;
+        user-select: none;
+        pointer-events: none; /* Hit-testing handled by DragController */
+    }
+
+    .vp-trash-icon-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(
+            135deg,
+            rgba(239, 68, 68, 0.15) 0%,
+            rgba(239, 68, 68, 0.25) 100%
+        );
+        border: 2px solid rgba(239, 68, 68, 0.3);
+        transition:
+            transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+            background 200ms ease,
+            border-color 200ms ease,
+            box-shadow 200ms ease;
+        animation: vp-trash-pulse 2s ease-in-out infinite;
+    }
+
+    .vp-trash-icon-container.hover {
+        animation: vp-trash-bounce-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1)
+            forwards;
+        background: linear-gradient(
+            135deg,
+            rgba(239, 68, 68, 0.3) 0%,
+            rgba(239, 68, 68, 0.45) 100%
+        );
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+    }
+
+    /* When leaving hover, play bounce-out */
+    .vp-trash-icon-container:not(.hover) {
+        animation:
+            vp-trash-bounce-out 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)
+                forwards,
+            vp-trash-pulse 2s ease-in-out 350ms infinite;
+    }
+
+    .vp-trash-icon {
+        font-size: 36px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .vp-trash-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #ef4444;
+        opacity: 0.8;
+        transition: opacity 200ms ease;
+    }
+
+    .vp-trash-zone.hover .vp-trash-label {
+        opacity: 1;
     }
 </style>

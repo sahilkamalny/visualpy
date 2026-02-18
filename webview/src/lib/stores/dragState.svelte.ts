@@ -23,6 +23,8 @@ export interface DragStateData {
     /** For palette drags, the block type/category */
     paletteType: string | null;
     paletteCategory: string | null;
+    /** Whether the pointer is currently over the palette trash zone */
+    overTrash: boolean;
 }
 
 const INITIAL_STATE: DragStateData = {
@@ -36,6 +38,7 @@ const INITIAL_STATE: DragStateData = {
     fromPalette: false,
     paletteType: null,
     paletteCategory: null,
+    overTrash: false,
 };
 
 class DragStateStore {
@@ -69,6 +72,7 @@ class DragStateStore {
             fromPalette,
             paletteType,
             paletteCategory,
+            overTrash: false,
         };
     }
 
@@ -86,6 +90,10 @@ class DragStateStore {
 
     startSnapping(): void {
         this.data.phase = 'snapping';
+    }
+
+    setOverTrash(value: boolean): void {
+        this.data.overTrash = value;
     }
 
     reset(): void {
