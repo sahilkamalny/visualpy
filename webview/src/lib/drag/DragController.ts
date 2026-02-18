@@ -258,11 +258,10 @@ export class DragController {
 
         if (this.sourceElements.length > 0) {
             showGhost(this.sourceElements, this.sourceWidth);
-            // Dim originals only for canvas blocks (palette items stay visible)
+            // Hide originals — the ghost is the visual representation now
             if (!fromPalette) {
                 this.sourceElements.forEach(el => {
-                    el.style.opacity = '0.3';
-                    el.style.transition = 'opacity 150ms ease';
+                    el.style.display = 'none';
                 });
             }
         }
@@ -412,8 +411,7 @@ export class DragController {
         // Restore source elements
         if (this.sourceElements.length > 0) {
             this.sourceElements.forEach(el => {
-                el.style.opacity = '';
-                el.style.transition = '';
+                el.style.display = '';
             });
             this.sourceElements = [];
         }
