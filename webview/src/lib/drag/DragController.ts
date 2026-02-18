@@ -319,7 +319,18 @@ export class DragController {
         moveGhost(gx, gy);
 
         // 2. Auto-scroll near edges
-        autoScroll(this.scrollContainer, this.pointerY);
+        const scrollDelta = autoScroll(this.scrollContainer, this.pointerY);
+
+        // Rebuild drop zone cache if scroll position changed —
+        // the cached rects are viewport-relative and go stale after scrolling.
+        if (scrollDelta !== 0) {
+            const sourceId = dragState.data.sourceId || '';
+            let excludeIds = [sourceId];
+            if (!dragState.data.fromPalette && uiState.selectedBlockIds.includes(sourceId)) {
+                excludeIds = uiState.selectedBlockIds;
+            }
+            this.dropZones = buildDropZoneCache(this.canvas, excludeIds);
+        }
 
         // 3. Detect if pointer is over the palette trash zone
         //    (only for existing canvas blocks, not palette-initiated drags)
