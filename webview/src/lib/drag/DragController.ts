@@ -43,6 +43,10 @@ export class DragController {
     // Active drop indicator element
     private activeIndicator: HTMLElement | null = null;
 
+    // Spring displacement tracking
+    private displacedElements: Map<HTMLElement, string> = new Map();
+    private lastDisplacementKey = '';
+
     constructor(canvas: HTMLElement, scrollContainer: HTMLElement) {
         this.canvas = canvas;
         this.scrollContainer = scrollContainer;
@@ -338,8 +342,9 @@ export class DragController {
             ? null
             : findClosestDropZone(this.dropZones, this.pointerX, this.pointerY);
 
-        // 5. Update drop indicator
+        // 5. Update drop indicator + spring displacement
         this.updateDropIndicator(zone, domScale);
+        this.updateDisplacement(zone, domScale);
 
         // 6. Update drag state (only if changed)
         const current = dragState.data.dropTarget;
@@ -416,8 +421,9 @@ export class DragController {
         // Hide ghost
         hideGhost();
 
-        // Clear drop indicator
+        // Clear drop indicator and displacement
         this.clearDropIndicator();
+        this.clearDisplacement();
 
         // Reset state
         dragState.reset();
@@ -473,5 +479,86 @@ export class DragController {
             this.activeIndicator.remove();
             this.activeIndicator = null;
         }
+    }
+
+    // --- Spring Displacement ---
+
+    /**
+     * Apply spring displacement to blocks that need to shift
+     * to make room at the current drop position.
+     * Uses direct DOM manipulation for max frame rate.
+     */
+    private updateDisplacement(zone: DropZone | null, scale: number): void {
+        const key = zone ? `${zone.parentId}:${zone.index}` : '';
+
+        // No change — skip all DOM work
+        if (key === this.lastDisplacementKey) return;
+        this.lastDisplacementKey = key;
+
+        // Track which elements should stay displaced (to clear stale ones)
+        const nextDisplaced = new Map<HTMLElement, string>();
+
+        if (zone) {
+            // Find the parent container element
+            let container: HTMLElement | null;
+            if (zone.parentId === null) {
+                container = this.canvas;
+            } else {
+                container = this.canvas.querySelector<HTMLElement>(
+                    `[data-children-of="${zone.parentId}"]`
+                );
+            }
+
+            if (container) {
+                // Determine excluded IDs (the blocks being dragged)
+                const sourceId = dragState.data.sourceId || '';
+                let excludeIds = [sourceId];
+                if (!dragState.data.fromPalette && uiState.selectedBlockIds.includes(sourceId)) {
+                    excludeIds = uiState.selectedBlockIds;
+                }
+
+                // Get direct child blocks in this container, excluding dragged ones
+                const children = Array.from(
+                    container.querySelectorAll<HTMLElement>(':scope > [data-block-id]')
+                ).filter(el => !excludeIds.includes(el.dataset.blockId!));
+
+                // Calculate gap height from source rect
+                const sourceRect = dragState.data.sourceRect;
+                const gapHeight = sourceRect
+                    ? (sourceRect.height + 8) / scale  // +8 for margin
+                    : 48 / scale;  // fallback
+
+                // Displace children at index >= drop index
+                children.forEach((el, i) => {
+                    if (i >= zone.index) {
+                        const transform = `translateY(${gapHeight}px) translateZ(0)`;
+                        nextDisplaced.set(el, transform);
+
+                        // Only write if value changed
+                        if (this.displacedElements.get(el) !== transform) {
+                            el.style.transform = transform;
+                        }
+                    }
+                });
+            }
+        }
+
+        // Clear transforms on elements that are no longer displaced
+        for (const [el] of this.displacedElements) {
+            if (!nextDisplaced.has(el)) {
+                el.style.transform = '';
+            }
+        }
+
+        this.displacedElements = nextDisplaced;
+    }
+
+    /** Clear all displacement transforms (called on drag end) */
+    private clearDisplacement(): void {
+        for (const [el] of this.displacedElements) {
+            el.style.transform = '';
+        }
+        this.displacedElements.clear();
+        this.lastDisplacementKey = '';
     }
 }

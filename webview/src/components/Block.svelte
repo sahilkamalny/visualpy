@@ -213,7 +213,7 @@
         transition:
             box-shadow var(--vp-transition-fast),
             border-color var(--vp-transition-fast),
-            transform var(--vp-transition);
+            transform var(--vp-spring-duration) var(--vp-spring);
         cursor: default;
         animation: vp-scale-in 200ms ease backwards;
         overflow: hidden; /* contain the accent strip */
