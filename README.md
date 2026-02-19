@@ -20,16 +20,16 @@ Works seamlessly with:
 - **📍 Interactive Cursor Sync**: Click a line in your code and the corresponding block is focused into view.
 - **🎨 Modern Block Palette**: A beautiful, color-coded palette for all standard Python constructs.
 - **⚡ Smart Features**:
-    - **Undo/Redo**: Full history support with `Ctrl+Z` / `Ctrl+Y`.
+    - **Undo/Redo**: Full history support with `Ctrl+Z` (`⌘+Z`) / `Ctrl+Y` (`⌘+Y`).
     - **Zoom & Pan**: Infinite canvas with smooth zoom controls.
     - **Multi-Selection**: Select, move, copy, and delete multiple blocks at once.
-- **🛠️ Auto Sync & Save**: Automatically syncs code updates to blocks and vice versa, unless toggled off.
+- **🛠️ Auto Sync & Save**: Automatically syncs code updates to blocks and vice versa (toggleable).
 - **🌙 Theme Aware**: Automatically adapts to your VS Code theme (Dark/Light/High Contrast).
 
 ## 🚀 Quick Start
 
 1.  **Open a Python file** (`.py`).
-2.  Press **`Ctrl+Shift+B`** (or `Cmd+Shift+B` on Mac).
+2.  Press **`Ctrl+Shift+B`** (or `⌘+Shift+B` on Mac).
 3.  The **VisualPy** panel will open beside your code.
 4.  **Drag & Drop** blocks from the palette to build your logic.
 5.  **Edit** values directly in the blocks.
@@ -62,21 +62,21 @@ VisualPy supports a wide range of Python features, organized by category:
 
 | Action | Shortcut |
 |--------|----------|
-| **Open Block Editor** | `Ctrl + Shift + B` |
-| **Undo** | `Ctrl + Z` |
-| **Redo** | `Ctrl + Y` |
+| **Open Block Editor** | `Ctrl + Shift + B` (`⌘ + Shift + B`) |
+| **Undo** | `Ctrl + Z` (`⌘ + Z`) |
+| **Redo** | `Ctrl + Y` (`⌘ + Y`) |
 | **Select/Deselect All** | `A` |
 | **Cancel Selection** | `Escape` |
 | **Delete Selection** | `Delete` |
-| **Duplicate** | `Ctrl + D` |
-| **Copy / Paste** | `Ctrl + C` / `Ctrl + V` |
+| **Duplicate** | `Ctrl + D` (`⌘ + D`) |
+| **Copy / Paste** | `Ctrl + C` / `Ctrl + V` (`⌘ + C` / `⌘ + V`) |
 | **Zoom In** | `+` or `=` |
 | **Zoom Out** | `-` or `_` |
 | **Reset Zoom** | `0` |
 
 ## ⚙️ Configuration
 
-Customize VisualPy in your VS Code settings (`Ctrl+,`):
+Customize VisualPy in your VS Code settings (`Ctrl+,` / `⌘+,`):
 
 | Setting | Default | Description |
 |---------|:-------:|-------------|
@@ -99,13 +99,11 @@ VisualPy is built to bridge the gap between block-based and text-based coding:
 
 ## 🛠️ Development
 
-VisualPy is designed to be easy to set up and run.
-
-### Prerequisites (Development Only)
+### Prerequisites
 -   **Node.js**: Version 16.x or higher.
 -   **Git**: For cloning the repository.
 
-### Setup Steps
+### Getting Started
 
 1.  **Clone the repository:**
 
@@ -118,34 +116,25 @@ VisualPy is designed to be easy to set up and run.
 
     ```bash
     npm install
-    # This automatically installs dependencies for both the extension and the webview
     ```
 
-3.  **Run the Extension:**
-
-    *   Open the project in VS Code.
-    *   Press **F5**.
-    *   This will automatically run the full build (`npm run dev`) and launch the Extension Development Host.
+3.  **Run the Extension:** Open the project in VS Code and press **F5**. This builds the project automatically and launches the Extension Development Host.
 
 **For Active Development (Hot Reload):**
 
 If you are actively modifying the code, you can enable watch mode to auto-rebuild on changes:
 
-1.  Press **Ctrl+Shift+B** (or Cmd+Shift+B)
-2.  Select **"Watch All"**
-3.  This starts the watch task in a new terminal.
-
-*Note: Do not press F5 while the watch task is running to avoid conflicts. Just use the already-open Extension Development Host window and reload it (Ctrl+R) to see changes.*
+1.  Press `Ctrl+Shift+B` (`⌘+Shift+B` on Mac) and select **"Watch All"**.
+2.  Use the already-open Extension Development Host window and reload it (`Ctrl+R` / `⌘+R`) to see changes.
 
 ## ❓ Troubleshooting
 
+### Extension not loading / `Cannot find module 'dist/extension.js'`
+- The extension must be compiled before it can run. Press **F5** to build and launch, or run `npm run dev` manually in the terminal.
+
 ### Extension not loading / Black screen
 - Ensure you have run `npm install`.
-- If the issue persists, try running `npm run dev` manually in the terminal to ensure a clean build.
 - Check the console for errors (Help > Toggle Developer Tools).
-
-### "Extension is already running / Waiting for preLaunchTask 'Build All'"
-- This usually happens if you try to launch (F5) while a watch task is running in the background. Kill / abort any running terminals /tasks and try again or press `Debug Anyway`.
 
 ## 📄 License
 

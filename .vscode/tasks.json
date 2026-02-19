@@ -9,11 +9,12 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": "$tsc",
+            "problemMatcher": [],
             "presentation": {
                 "reveal": "silent",
                 "clear": true
-            }
+            },
+            "isBackground": false
         },
         {
             "label": "Watch All",
