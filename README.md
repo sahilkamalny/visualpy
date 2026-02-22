@@ -19,7 +19,7 @@
 
 ## Overview
 
-VisualPy is a VS Code extension that renders Python source files as interactive visual block diagrams — Scratch-style, but for real Python — and keeps the code and blocks in sync bidirectionally. Editing a block updates the source; editing the source updates the blocks. It targets learners transitioning from block-based environments to text-based programming, while remaining useful to any developer who wants a structural view of control flow and nesting.
+VisualPy is a VS Code extension that renders Python source files as interactive visual block diagrams (Scratch-style, but for real Python) and keeps the code and blocks in sync bidirectionally. Editing a block updates the source; editing the source updates the blocks. It targets learners transitioning from block-based environments to text-based programming, while remaining useful to any developer who wants a structural view of control flow and nesting.
 
 ---
 
