@@ -1,199 +1,141 @@
-<div align="center">
+# VisualPy
 
-<img src="assets/logo.svg" alt="Relearnable Logo" width="72" height="72" />
+**Bidirectional Python ↔ visual block editor for VS Code — convert code to Scratch-like blocks and back, in real time.**
 
-# Relearnable
+**Built with** TypeScript · VS Code Extension API · Node.js · HTML/CSS · npm
 
-**AI-powered adaptive learning platform — personalized flashcards, quizzes, and intelligent curriculum trees.**
-
-[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Backend-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Gemini](https://img.shields.io/badge/Gemini_AI-Content_Gen-4285F4?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev/)
-[![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com/)
-
-[Live Demo](https://relearnable.ai) · [Portfolio](https://sahilkamal.dev) · [LinkedIn](https://linkedin.com/in/sahilkamalny) · [Contact](mailto:sahilkamal.dev@gmail.com)
-
-**Built with** React 18 · TypeScript · Vite · Supabase · Google Gemini · Stripe · Framer Motion · Tailwind CSS · Recharts
-
-</div>
+![VisualPy Demo](resources/demo.gif)
 
 ---
 
 ## Overview
 
-Relearnable is a full-stack adaptive learning application that uses AI to generate personalized study content on any topic. Users can learn from scratch via AI-crafted flashcard and quiz lessons, or take placement tests that identify knowledge gaps and build targeted remediation curricula. Progress is tracked visually through an interactive knowledge graph and a radar chart spanning 15 subject categories.
+VisualPy is a VS Code extension that renders Python source files as interactive visual block diagrams and keeps them in sync bidirectionally. Editing a block updates the code; editing the code updates the blocks. It targets learners bridging the gap from block-based environments like Scratch to real Python, while remaining useful to experienced developers who want a structural view of control flow and nesting.
 
 ---
 
-## Screenshots
+## Compatibility
 
-<div align="center">
-
-| Landing Page | Dashboard |
-|:---:|:---:|
-| ![Landing Page](assets/landing-page.png) | ![Dashboard](assets/dashboard-search.png) |
-
-| Flashcard Lesson | Interactive Quiz |
-|:---:|:---:|
-| ![Flashcard](assets/flashcard-lesson.png) | ![Quiz](assets/quiz-correct-answer.png) |
-
-| Curriculum Tree | Mastery Tracking |
-|:---:|:---:|
-| ![Curriculum](assets/curriculum-tree.png) | ![Mastery](assets/dashboard-cards.png) |
-
-</div>
+Works with VS Code 1.70.0+ and any VS Code-based IDE, including Cursor, Windsurf, Google Antigravity, and VSCodium.
 
 ---
 
 ## Features
 
-**Adaptive Learning Engine**
-- *Learn Mode* — AI generates structured lessons as flashcards and quizzes for any topic
-- *Relearn Mode* — Placement tests surface knowledge gaps and produce targeted remediation paths
-- Beginner, Intermediate, and Advanced content difficulty options
+**Bidirectional Sync** — Changes in the code editor and the block canvas propagate to each other automatically. Sync mode is configurable: `manual`, `onSave`, or `realtime`.
 
-**Knowledge Graph**
-- Interactive node-based curriculum tree with locked / unlocked / completed states
-- Pan, zoom, and touch navigation; graph expands dynamically as topics are mastered
+**Interactive Cursor Sync** — Clicking a line in the code editor focuses the corresponding block in the canvas.
 
-**Mastery Tracking**
-- Radar chart visualization across 15 knowledge categories (Recharts)
-- Real-time score updates persisted to the database on lesson completion
+**Block Palette** — Color-coded palette covering the full range of standard Python constructs (see [Supported Constructs](#supported-python-constructs) below).
 
-**AI Content Generation**
-- Google Gemini API (`gemini-2.0-flash`) called through Supabase Edge Functions — API keys never exposed to the client
-- Structured JSON output for lessons, quizzes, and placement test flows
+**Infinite Canvas** — Smooth zoom and pan with minimap overview; zoom range 50–200%.
 
-**Subscription Management**
-- Stripe Checkout, Customer Portal, and Webhooks for recurring billing
-- Free tier with usage limits; monthly and annual premium plans
+**Multi-Selection** — Select, move, copy, and delete multiple blocks simultaneously.
 
-**UI / UX**
-- Custom glassmorphic design system built on Tailwind CSS
-- Framer Motion micro-animations and layout transitions throughout
-- Full dark / light mode with system preference detection
-- PWA manifest for mobile home-screen installation
+**Full Undo / Redo** — Complete edit history within the session.
+
+**Theme Aware** — Automatically adapts to the active VS Code theme (Dark / Light / High Contrast).
 
 ---
 
-## Architecture
+## Quick Start
 
-```mermaid
-flowchart TB
-    subgraph Client["Frontend — React + Vite"]
-        UI[Glass UI Components]
-        Pages[Pages: Dashboard · Lessons · Settings]
-        Hooks[Custom React Hooks]
-        Context[Auth & Theme Contexts]
-    end
-
-    subgraph Backend["Backend — Supabase"]
-        Auth[Authentication]
-        DB[(PostgreSQL)]
-        Edge[Edge Functions]
-    end
-
-    subgraph External["External Services"]
-        Gemini[Google Gemini AI]
-        Stripe[Stripe Payments]
-    end
-
-    UI --> Pages --> Hooks & Context
-    Context --> Auth --> DB
-    Hooks --> DB
-    Pages --> Edge --> Gemini
-    Pages --> Stripe
-```
-
-**Key decisions**
-
-| Concern | Choice | Rationale |
-|---|---|---|
-| Frontend | React 18 + TypeScript | Type safety, modern hooks, large ecosystem |
-| Build | Vite 5 | Sub-second HMR, optimized production output |
-| Styling | Tailwind CSS 4 + CSS variables | Rapid iteration with a consistent token system |
-| Animation | Framer Motion 11 | Declarative API, gesture support, layout animations |
-| Backend | Supabase | Auth, real-time database, and edge functions in one service |
-| AI | Gemini via Edge Functions | Server-side key isolation; structured JSON responses |
-| Payments | Stripe | Webhook reliability, hosted portal, subscription lifecycle |
-| Charts | Recharts | React-native, responsive, composable chart primitives |
+1. Open any Python file (`.py`)
+2. Press `Ctrl+Shift+B` (`⌘+Shift+B` on macOS)
+3. The VisualPy panel opens beside your code
+4. Drag blocks from the palette onto the canvas to build logic
+5. Edit values inline within blocks
+6. Save the file (or press Sync) — the Python source updates instantly
 
 ---
 
-## Project Structure
+## Supported Python Constructs
 
-```
-relearnable/
-├── src/
-│   ├── components/ui/        # Glassmorphic design-system primitives
-│   └── assets/               # SVG icons and static images
-├── components/               # Feature components
-│   ├── KnowledgeGraph.tsx    # Interactive curriculum tree
-│   ├── MasteryChart.tsx      # Radar chart visualization
-│   ├── Quiz.tsx              # Quiz engine with per-question explanations
-│   └── Flashcard.tsx         # Flip-animated flashcard
-├── pages/                    # Route-level components
-│   ├── Dashboard.tsx         # Main learning hub
-│   ├── LessonView.tsx        # Flashcard & quiz lesson flow
-│   ├── Settings.tsx          # Account and subscription management
-│   └── LandingPage.tsx       # Marketing page and auth entry point
-├── services/                 # External integrations
-│   ├── databaseService.ts    # Supabase CRUD with optimistic updates
-│   ├── geminiService.ts      # AI content generation helpers
-│   └── stripeService.ts      # Checkout and portal session creation
-├── contexts/
-│   ├── AuthContext.tsx        # Session and user state
-│   └── ThemeContext.tsx       # Dark / light mode
-├── hooks/                    # Shared custom hooks
-├── supabase/functions/       # Deno edge functions (AI proxy)
-└── types.ts                  # Shared TypeScript definitions
-```
-
----
-
-## Code Samples
-
-Representative excerpts are included for portfolio review.
-
-| Sample | Description |
+| Category | Constructs |
 |---|---|
-| [`types/models.ts`](code-samples/types/models.ts) | Core TypeScript interfaces for learning entities |
-| [`hooks/useInstallPrompt.ts`](code-samples/hooks/useInstallPrompt.ts) | PWA install-prompt hook with browser API integration |
-| [`components/GlassButton.tsx`](code-samples/components/GlassButton.tsx) | Reusable glassmorphic button with Framer Motion and dark mode |
-| [`components/ThinkingPills.tsx`](code-samples/components/ThinkingPills.tsx) | Animated AI "thinking" loading indicator |
+| Imports | `import`, `from ... import` |
+| Variables | Assignment (`=`), augmented (`+=`, `-=`), typed assignment |
+| Functions | `def`, `async def`, `return`, `yield` |
+| Control Flow | `if`, `elif`, `else` |
+| Loops | `for`, `while`, `break`, `continue` |
+| Error Handling | `try`, `except`, `finally`, `raise`, `assert` |
+| Classes | Class definitions |
+| Context Managers | `with` statements |
+| Miscellaneous | Comments, expressions, `pass` |
 
 ---
 
-## Tech Stack
+## Keyboard Shortcuts
 
-| Layer | Technologies |
+| Action | Shortcut |
 |---|---|
-| Core | React 18, TypeScript 5.3, Vite 5 |
-| Styling | Tailwind CSS 4, Custom CSS variables |
-| Animation | Framer Motion 11, CSS keyframe animations |
-| State | React Context API, custom hooks |
-| Routing | React Router 6 |
-| Backend | Supabase — Auth, PostgreSQL, Edge Functions (Deno) |
-| AI | Google Gemini API (`gemini-2.0-flash`) |
-| Payments | Stripe — Checkout, Webhooks, Customer Portal |
-| Charts | Recharts — Radar, ResponsiveContainer |
-| Effects | tsparticles, canvas-confetti |
+| Open block editor | `Ctrl+Shift+B` / `⌘+Shift+B` |
+| Undo | `Ctrl+Z` / `⌘+Z` |
+| Redo | `Ctrl+Y` / `⌘+Y` |
+| Select / deselect all | `A` |
+| Cancel selection | `Escape` |
+| Delete selection | `Delete` |
+| Duplicate | `Ctrl+D` / `⌘+D` |
+| Copy / Paste | `Ctrl+C` / `Ctrl+V` — `⌘+C` / `⌘+V` |
+| Zoom in | `+` or `=` |
+| Zoom out | `-` or `_` |
+| Reset zoom | `0` |
 
 ---
 
-## Contact
+## Configuration
 
-**Sahil Kamal** — Full-Stack Developer
+All settings are available in VS Code Settings (`Ctrl+,` / `⌘+,`) under the `visualpy` namespace.
 
-[sahilkamal.dev](https://sahilkamal.dev) · [linkedin.com/in/sahilkamalny](https://linkedin.com/in/sahilkamalny) · [sahilkamal.dev@gmail.com](mailto:sahilkamal.dev@gmail.com)
+| Setting | Default | Description |
+|---|:---:|---|
+| `visualpy.syncMode` | `onSave` | When to sync blocks to code: `manual`, `onSave`, or `realtime` |
+| `visualpy.indentSize` | `4` | Spaces per indentation level |
+| `visualpy.indentStyle` | `spaces` | `spaces` or `tabs` |
+| `visualpy.defaultZoom` | `100` | Initial canvas zoom level (50–200) |
+| `visualpy.showMinimap` | `true` | Show minimap overview on the canvas |
+| `visualpy.palettePosition` | `left` | Block palette position: `left`, `right`, or `hidden` |
+| `visualpy.pythonPath` | *(auto)* | Override path to Python executable |
 
 ---
 
-<div align="center">
+## Requirements
 
-*This repository contains documentation and representative code samples for portfolio purposes. Full source code is proprietary.*
+- VS Code 1.70.0 or higher
+- Python 3.x on PATH
+- Recommended: [Python extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 
-**© 2026 Sahil Kamal. All Rights Reserved.**
+---
 
-</div>
+## Development
+
+**Prerequisites:** Node.js 16.x+, Git
+
+```bash
+# Clone and install
+git clone https://github.com/visualpy/visualpy.git
+cd visualpy
+npm install
+```
+
+**Run the extension:** Open the project in VS Code and press `F5`. This compiles the project and launches the Extension Development Host.
+
+**Watch mode (hot reload):** Press `Ctrl+Shift+B` / `⌘+Shift+B` and select **Watch All**. Reload the Extension Development Host window (`Ctrl+R` / `⌘+R`) to pick up changes.
+
+---
+
+## Troubleshooting
+
+**`Cannot find module 'dist/extension.js'`** — The extension must be compiled before it can run. Press `F5` to build and launch, or run `npm run dev` manually.
+
+**Black screen on load** — Ensure `npm install` has been run. Check the developer console for errors via Help → Toggle Developer Tools.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+*Developed by [Sahil Kamal](https://sahilkamal.dev) for the Python community.*
