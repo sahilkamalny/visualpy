@@ -1,4 +1,4 @@
-# VisualPy
+# 🧩 VisualPy
 
 **Convert Python code to Scratch-like visual blocks and back** - a bidirectional visual programming experience for VS Code.
 
