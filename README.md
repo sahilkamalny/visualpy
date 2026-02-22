@@ -1,16 +1,31 @@
+<div align="center">
+
 # VisualPy
 
 **Bidirectional Python ↔ visual block editor for VS Code — convert code to Scratch-like blocks and back, in real time.**
 
-**Built with** TypeScript · VS Code Extension API · Node.js · HTML/CSS · npm
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Svelte](https://img.shields.io/badge/Svelte-5.0-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev/)
+[![VS Code API](https://img.shields.io/badge/VS_Code_API-Extension-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/api)
+[![Node.js](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-![VisualPy Demo](resources/demo.gif)
+**Built with** Svelte · TypeScript · VS Code Extension API · Node.js
+
+[Portfolio](https://sahilkamal.dev) · [LinkedIn](https://linkedin.com/in/sahilkamalny) · [Contact](mailto:sahilkamal.dev@gmail.com)
+
+</div>
 
 ---
 
 ## Overview
 
-VisualPy is a VS Code extension that renders Python source files as interactive visual block diagrams and keeps them in sync bidirectionally. Editing a block updates the code; editing the code updates the blocks. It targets learners bridging the gap from block-based environments like Scratch to real Python, while remaining useful to experienced developers who want a structural view of control flow and nesting.
+VisualPy is a VS Code extension that renders Python source files as interactive visual block diagrams — Scratch-style, but for real Python — and keeps the code and blocks in sync bidirectionally. Editing a block updates the source; editing the source updates the blocks. It targets learners transitioning from block-based environments to text-based programming, while remaining useful to any developer who wants a structural view of control flow and nesting.
+
+---
+
+## Demo
+
+![VisualPy Demo](resources/demo.gif)
 
 ---
 
@@ -107,6 +122,17 @@ All settings are available in VS Code Settings (`Ctrl+,` / `⌘+,`) under the `v
 
 ---
 
+## Tech Stack
+
+| Layer | Technologies |
+|---|---|
+| Core | TypeScript, Svelte 5 |
+| Extension Host | VS Code Extension API |
+| Build | Node.js, npm |
+| Styling | CSS, VS Code theme tokens |
+
+---
+
 ## Development
 
 **Prerequisites:** Node.js 16.x+, Git
@@ -138,4 +164,16 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-*Developed by [Sahil Kamal](https://sahilkamal.dev) for the Python community.*
+## Contact
+
+**Sahil Kamal** — Full-Stack Developer
+
+[sahilkamal.dev](https://sahilkamal.dev) · [linkedin.com/in/sahilkamalny](https://linkedin.com/in/sahilkamalny) · [sahilkamal.dev@gmail.com](mailto:sahilkamal.dev@gmail.com)
+
+---
+
+<div align="center">
+
+*© 2026 Sahil Kamal*
+
+</div>
