@@ -13,6 +13,8 @@ class UIStateStore {
     autoSave = $state(true);
     ctrlPressed = $state(false);
     paletteCollapsed = $state(false);
+    paletteWidth = $state(160);
+    isResizingPalette = $state(false);
 
     // Cursor-to-block highlight: purely visual, separate from selection
     cursorHighlightId = $state<string | null>(null);
@@ -63,7 +65,24 @@ class UIStateStore {
     }
 
     togglePalette(): void {
+        // Clear resize state to ensure sash highlight doesn't persist
+        this.isResizingPalette = false;
         this.paletteCollapsed = !this.paletteCollapsed;
+    }
+
+    setPaletteWidth(width: number): void {
+        // Auto-collapse if dragged below 80px
+        if (width < 80) {
+            // End resize first so CSS transitions re-enable for smooth animation
+            this.isResizingPalette = false;
+            this.paletteCollapsed = true;
+            return;
+        }
+        // Re-expand if collapsed and dragged outward
+        if (this.paletteCollapsed && width >= 80) {
+            this.paletteCollapsed = false;
+        }
+        this.paletteWidth = Math.max(160, Math.min(240, width));
     }
 
     /** Get the first selected block ID (for backwards compat with single-select code) */

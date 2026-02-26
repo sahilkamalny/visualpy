@@ -236,12 +236,13 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 }
                 break;
 
-            case 'LOG':
+            case 'LOG': {
                 const level = message.payload.level;
                 if (level === 'error') Logger.error(message.payload.message);
                 else if (level === 'warn') Logger.warn(message.payload.message);
                 else Logger.info(`[Webview] ${message.payload.message}`);
                 break;
+            }
 
             case 'ERROR':
                 Logger.error(`Webview error: ${message.payload.message}`);

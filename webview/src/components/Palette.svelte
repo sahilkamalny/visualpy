@@ -9,9 +9,7 @@
     import { dragState } from "../lib/stores/dragState.svelte";
 
     let searchQuery = $state("");
-    let expandedCategories = $state<Set<string>>(
-        new Set(PALETTE_CATEGORIES.map((c) => c.name)),
-    );
+    let expandedCategories = $state<Set<string>>(new Set());
 
     const filteredCategories = $derived(
         PALETTE_CATEGORIES.map((cat) => ({
@@ -56,12 +54,40 @@
         );
         blockStore.insertBlock(newBlock, uiState.selectedBlockId);
     }
+
+    // --- Resize handle (VS Code "sash" pattern) ---
+    let resizeStartX = 0;
+    let resizeStartWidth = 0;
+
+    function onResizePointerDown(e: PointerEvent) {
+        e.preventDefault();
+        const target = e.currentTarget as HTMLElement;
+        target.setPointerCapture(e.pointerId);
+        resizeStartX = e.clientX;
+        resizeStartWidth = uiState.paletteWidth;
+        uiState.isResizingPalette = true;
+    }
+
+    function onResizePointerMove(e: PointerEvent) {
+        if (!uiState.isResizingPalette) return;
+        const delta = e.clientX - resizeStartX;
+        uiState.setPaletteWidth(resizeStartWidth + delta);
+    }
+
+    function onResizePointerUp(e: PointerEvent) {
+        if (!uiState.isResizingPalette) return;
+        const target = e.currentTarget as HTMLElement;
+        target.releasePointerCapture(e.pointerId);
+        uiState.isResizingPalette = false;
+    }
 </script>
 
 <div
     class="vp-palette"
     class:collapsed={uiState.paletteCollapsed}
     class:trash-mode={showTrash}
+    class:resizing={uiState.isResizingPalette}
+    style="--palette-width: {uiState.paletteWidth}px;"
     role="complementary"
     aria-label={showTrash ? "Trash zone" : "Block palette"}
 >
@@ -159,46 +185,78 @@
         </div>
     {/if}
 
-    <!-- Poking out button when collapsed -->
-    <button
-        class="vp-palette-expand-btn"
-        onclick={() => uiState.togglePalette()}
-        title="Expand Sidebar"
-        aria-hidden={!uiState.paletteCollapsed}
-    >
-        ››
-    </button>
+    <!-- Resize handle (sash) -->
+    {#if !uiState.paletteCollapsed && !showTrash}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+            class="vp-palette-sash"
+            onpointerdown={onResizePointerDown}
+            onpointermove={onResizePointerMove}
+            onpointerup={onResizePointerUp}
+            onpointercancel={onResizePointerUp}
+        ></div>
+    {/if}
 </div>
 
 <style>
     .vp-palette {
-        width: 240px; /* Slightly wider for better readability */
-        min-width: 240px;
+        width: var(--palette-width, 160px);
+        min-width: var(--palette-width, 160px);
+        max-width: var(--palette-width, 160px);
         background: var(--vp-bg);
         border-right: 1px solid var(--vp-border);
         display: flex;
         flex-direction: column;
         overflow: hidden;
         position: relative;
+        flex-shrink: 0;
         transition:
-            width 200ms ease,
-            min-width 200ms ease,
+            width 700ms cubic-bezier(0.2, 0, 0, 1),
+            min-width 700ms cubic-bezier(0.2, 0, 0, 1),
+            max-width 700ms cubic-bezier(0.2, 0, 0, 1),
             background 300ms ease,
             border-color 300ms ease;
     }
 
-    .vp-palette.collapsed {
-        width: 0;
-        min-width: 0;
-        border-right: none;
-        overflow: visible; /* Allow expand button to poke out */
+    /* Disable transitions during active resize for responsiveness */
+    .vp-palette.resizing {
+        transition: none;
     }
 
-    /* Hide children when collapsed to prevent layout issues */
-    .vp-palette.collapsed > *:not(.vp-palette-expand-btn) {
-        opacity: 0;
+    .vp-palette.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        border-right: none;
+        /* overflow stays hidden — allows close animation to clip cleanly */
+        /* Opening transition (fires when this class is REMOVED = expanding): half the close speed */
+        transition:
+            width 350ms cubic-bezier(0.2, 0, 0, 1),
+            min-width 350ms cubic-bezier(0.2, 0, 0, 1),
+            max-width 350ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* --- Resizable sash (VS Code pattern) --- */
+    .vp-palette-sash {
+        position: absolute;
+        top: 0;
+        right: -2px;
+        width: 4px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 10;
+        transition: background 150ms ease;
+    }
+
+    .vp-palette-sash:hover,
+    .vp-palette.resizing .vp-palette-sash {
+        background: var(--vp-focus);
+    }
+
+    /* Children are clipped naturally by overflow:hidden as width slides to 0.
+       No opacity rule needed — content stays visible throughout the animation. */
+    .vp-palette.collapsed > * {
         pointer-events: none;
-        transition: opacity 100ms ease;
     }
 
     /* Trash mode: red-tinted background */
@@ -248,34 +306,6 @@
     .vp-palette-collapse-btn:hover {
         opacity: 1;
         background: var(--vp-hover);
-    }
-
-    /* Expand button poking out */
-    .vp-palette-expand-btn {
-        position: absolute;
-        left: 0;
-        top: 12px;
-        z-index: 100;
-        background: var(--vp-bg);
-        border: 1px solid var(--vp-border);
-        border-left: none; /* Make it look attached */
-        border-radius: 0 4px 4px 0;
-        width: 24px;
-        height: 32px;
-        display: none; /* Hidden by default */
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        color: var(--vp-fg);
-        font-size: 16px;
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-    }
-    .vp-palette-expand-btn:hover {
-        background: var(--vp-hover);
-    }
-
-    .vp-palette.collapsed .vp-palette-expand-btn {
-        display: flex; /* Show only when collapsed */
     }
 
     .vp-palette-search {

@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        // Svelte language support (syntax highlighting, IntelliSense, error checking)
+        "svelte.svelte-vscode",
+        // ESLint integration (surfaces lint errors inline as you type)
+        "dbaeumer.vscode-eslint",
+        // Prettier (optional but common for formatting)
+        "esbenp.prettier-vscode",
+        // Error Lens (shows errors inline at end of the line — much nicer DX)
+        "usernamehw.errorlens"
+    ]
+}

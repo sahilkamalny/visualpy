@@ -1,302 +1,358 @@
 <script lang="ts">
-  import Toolbar from "./components/Toolbar.svelte";
-  import Palette from "./components/Palette.svelte";
-  import Canvas from "./components/Canvas.svelte";
-  import ContextMenu from "./components/ContextMenu.svelte";
-  import Toast from "./components/Toast.svelte";
-  import { blockStore } from "./lib/stores/blockStore.svelte";
-  import { uiState } from "./lib/stores/uiState.svelte";
-  import { dragState } from "./lib/stores/dragState.svelte";
-  import { send, onMessage, saveState } from "./lib/bridge";
-  import { debounce, generateId } from "./lib/utils";
-  import type { Block } from "./lib/types";
+    import Toolbar from "./components/Toolbar.svelte";
+    import Palette from "./components/Palette.svelte";
+    import Canvas from "./components/Canvas.svelte";
+    import ContextMenu from "./components/ContextMenu.svelte";
+    import Toast from "./components/Toast.svelte";
+    import { blockStore } from "./lib/stores/blockStore.svelte";
+    import { uiState } from "./lib/stores/uiState.svelte";
+    import { dragState } from "./lib/stores/dragState.svelte";
+    import { send, onMessage, saveState } from "./lib/bridge";
+    import { debounce, generateId } from "./lib/utils";
+    import type { Block } from "./lib/types";
 
-  // Guard: don't sync blocks back to the host until we've received
-  // the first INIT payload.
-  let initialized = false;
-
-  // Guard: suppress the $effect from echoing blocks back when we
-  // are processing an incoming message from the extension host.
-  let receivingFromHost = false;
-
-  // --- Extension host message handler ---
-
-  // Find the deepest block whose sourceRange contains the given 1-based line.
-  function findBlockAtLine(blocks: Block[], line: number): Block | null {
-    for (const block of blocks) {
-      const sr = block.metadata?.sourceRange;
-      if (sr && line >= sr.startLine && line <= sr.endLine) {
-        if (block.children) {
-          const child = findBlockAtLine(block.children, line);
-          if (child) return child;
-        }
-        if (block.attachments) {
-          const att = findBlockAtLine(block.attachments, line);
-          if (att) return att;
-        }
-        return block;
-      }
-    }
-    return null;
-  }
-
-  onMessage((message) => {
-    receivingFromHost = true;
-    try {
-      switch (message.type) {
-        case "INIT":
-          if (!initialized) {
-            blockStore.setBlocks(message.payload.blocks);
-            initialized = true;
-            if (message.payload.config?.defaultZoom) {
-              uiState.setZoom(message.payload.config.defaultZoom);
+    /** Recursively collapse all blocks that have children */
+    function collapseAll(blocks: Block[]) {
+        for (const block of blocks) {
+            if (block.children && block.children.length > 0) {
+                block.metadata.collapsed = true;
+                collapseAll(block.children);
             }
-          } else {
-            blockStore.reconcileBlocks(message.payload.blocks);
-          }
-          uiState.setFileName(message.payload.fileName);
-          hostUpdateTime = Date.now();
-          break;
-
-        case "UPDATE_BLOCKS":
-          blockStore.reconcileBlocks(message.payload.blocks);
-          if (message.payload.fileName) {
-            uiState.setFileName(message.payload.fileName);
-          }
-          hostUpdateTime = Date.now();
-          break;
-
-        case "SYNC_STATUS":
-          uiState.setSyncStatus(
-            message.payload.status,
-            message.payload.message,
-          );
-          break;
-
-        case "PARSE_ERROR": {
-          const firstError = message.payload.errors[0];
-          uiState.setSyncStatus("error", firstError.message);
-          break;
-        }
-
-        case "CURSOR_HIGHLIGHT": {
-          const line = message.payload.line;
-          if (line == null) {
-            uiState.setCursorHighlight(null);
-          } else {
-            const found = findBlockAtLine(blockStore.blocks, line);
-            const id = found?.id ?? null;
-            uiState.setCursorHighlight(id);
-            if (id) {
-              requestAnimationFrame(() => {
-                const el = document.querySelector(`[data-block-id="${id}"]`);
-                el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              });
+            if (block.attachments) {
+                collapseAll(block.attachments);
             }
-          }
-          break;
         }
-      }
-    } finally {
-      lastBlocksJson = JSON.stringify(blockStore.blocks);
-      receivingFromHost = false;
     }
-  });
 
-  // --- Auto-save: debounced sync to host ---
-  // Suppress auto-save for a short window after blocks arrive from the host
-  // to prevent the reverse sync race condition during rapid text editor edits.
-  let hostUpdateTime = 0;
-  const HOST_UPDATE_GRACE_MS = 500;
+    // Guard: don't sync blocks back to the host until we've received
+    // the first INIT payload.
+    let initialized = false;
 
-  const triggerAutoSave = debounce(() => {
-    if (uiState.autoSave && dragState.data.phase === "idle") {
-      // Don't sync back to code if blocks just came from the host
-      if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
-      uiState.setSyncStatus("syncing");
-      send({
-        type: "REQUEST_SYNC",
-        payload: { direction: "toCode", blocks: blockStore.blocks },
-      });
+    // Guard: suppress the $effect from echoing blocks back when we
+    // are processing an incoming message from the extension host.
+    let receivingFromHost = false;
+
+    // --- Extension host message handler ---
+
+    // Find the deepest block whose sourceRange contains the given 1-based line.
+    function findBlockAtLine(blocks: Block[], line: number): Block | null {
+        for (const block of blocks) {
+            const sr = block.metadata?.sourceRange;
+            if (sr && line >= sr.startLine && line <= sr.endLine) {
+                if (block.children) {
+                    const child = findBlockAtLine(block.children, line);
+                    if (child) return child;
+                }
+                if (block.attachments) {
+                    const att = findBlockAtLine(block.attachments, line);
+                    if (att) return att;
+                }
+                return block;
+            }
+        }
+        return null;
     }
-  }, 200);
 
-  // React to block changes — notify host + auto-save.
-  // Skips when: not yet initialized, or receiving blocks from host.
-  let lastBlocksJson = "";
-  $effect(() => {
-    const json = JSON.stringify(blockStore.blocks);
-    if (json !== lastBlocksJson) {
-      lastBlocksJson = json;
+    onMessage((message) => {
+        receivingFromHost = true;
+        try {
+            switch (message.type) {
+                case "INIT":
+                    if (!initialized) {
+                        blockStore.setBlocks(message.payload.blocks);
+                        // Collapse all blocks on initial load
+                        collapseAll(blockStore.blocks);
+                        blockStore.blocks = [...blockStore.blocks];
+                        initialized = true;
+                        if (message.payload.config?.defaultZoom) {
+                            uiState.setZoom(message.payload.config.defaultZoom);
+                        }
+                    } else {
+                        blockStore.reconcileBlocks(message.payload.blocks);
+                    }
+                    uiState.setFileName(message.payload.fileName);
+                    hostUpdateTime = Date.now();
+                    break;
 
-      if (!initialized || receivingFromHost) return;
+                case "UPDATE_BLOCKS":
+                    blockStore.reconcileBlocks(message.payload.blocks);
+                    if (message.payload.fileName) {
+                        uiState.setFileName(message.payload.fileName);
+                    }
+                    hostUpdateTime = Date.now();
+                    break;
 
-      // Don't echo blocks back when they just arrived from the host
-      // (reconcileBlocks can mutate IDs, causing the JSON to differ)
-      if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
+                case "SYNC_STATUS":
+                    uiState.setSyncStatus(
+                        message.payload.status,
+                        message.payload.message,
+                    );
+                    break;
 
-      saveState({ blocks: blockStore.blocks, zoom: uiState.zoomLevel });
-      send({ type: "BLOCKS_CHANGED", payload: { blocks: blockStore.blocks } });
+                case "PARSE_ERROR": {
+                    const firstError = message.payload.errors[0];
+                    uiState.setSyncStatus("error", firstError.message);
+                    break;
+                }
 
-      if (uiState.autoSave) {
-        triggerAutoSave();
-      }
-    }
-  });
-
-  // --- Collect all block IDs (for Ctrl+A) ---
-  function collectAllBlockIds(blocks: Block[]): string[] {
-    const ids: string[] = [];
-    for (const b of blocks) {
-      ids.push(b.id);
-      if (b.children) ids.push(...collectAllBlockIds(b.children));
-      if (b.attachments) ids.push(...collectAllBlockIds(b.attachments));
-    }
-    return ids;
-  }
-
-  // --- Check if the active element is a text input ---
-  function isTextInput(el: Element | null): boolean {
-    if (!el) return false;
-    const tag = (el as HTMLElement).tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA") return true;
-    if ((el as HTMLElement).isContentEditable) return true;
-    return false;
-  }
-
-  // After undo/redo/delete, Svelte re-renders the block tree and the
-  // browser auto-focuses the first focusable element (the search input).
-  // This forces focus back to the canvas after the DOM settles.
-  function refocusCanvas() {
-    requestAnimationFrame(() => {
-      const canvas = document.querySelector(
-        ".vp-canvas-container",
-      ) as HTMLElement | null;
-      if (canvas) canvas.focus();
+                case "CURSOR_HIGHLIGHT": {
+                    const line = message.payload.line;
+                    if (line == null) {
+                        uiState.setCursorHighlight(null);
+                    } else {
+                        const found = findBlockAtLine(blockStore.blocks, line);
+                        const id = found?.id ?? null;
+                        uiState.setCursorHighlight(id);
+                        if (id) {
+                            requestAnimationFrame(() => {
+                                const el = document.querySelector(
+                                    `[data-block-id="${id}"]`,
+                                );
+                                el?.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "nearest",
+                                });
+                            });
+                        }
+                    }
+                    break;
+                }
+            }
+        } finally {
+            lastBlocksJson = JSON.stringify(blockStore.blocks);
+            receivingFromHost = false;
+        }
     });
-  }
 
-  // --- Keyboard shortcuts ---
-  // ALL app-level shortcuts are disabled when focused inside a text field.
-  function onKeyDown(e: KeyboardEvent) {
-    if (isTextInput(e.target as Element)) return;
+    // --- Auto-save: debounced sync to host ---
+    // Suppress auto-save for a short window after blocks arrive from the host
+    // to prevent the reverse sync race condition during rapid text editor edits.
+    let hostUpdateTime = 0;
+    const HOST_UPDATE_GRACE_MS = 500;
 
-    if (e.ctrlKey && e.key === "z") {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      blockStore.undo();
-      refocusCanvas();
-    } else if (e.ctrlKey && e.key === "y") {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      blockStore.redo();
-      refocusCanvas();
-    } else if (e.key === "a") {
-      // Bare "a" key to select/deselect all blocks
-      // (Ctrl+A is intercepted by VS Code for text highlight)
-      e.preventDefault();
-      const allIds = collectAllBlockIds(blockStore.blocks);
-      uiState.selectAll(allIds);
-    } else if (e.key === "+" || e.key === "=") {
-      e.preventDefault();
-      uiState.zoomIn();
-    } else if (e.key === "-" || e.key === "_") {
-      e.preventDefault();
-      uiState.zoomOut();
-    } else if (e.key === "0") {
-      e.preventDefault();
-      uiState.resetZoom();
-    } else if (e.key === "Delete") {
-      e.preventDefault();
-      if (uiState.selectedBlockIds.length > 0) {
-        blockStore.removeBlocks([...uiState.selectedBlockIds]);
-        uiState.clearSelection();
-      }
-      refocusCanvas();
-    } else if (e.key === "Escape") {
-      uiState.hideContextMenu();
-      uiState.clearSelection();
-    } else if (e.ctrlKey && e.key === "c") {
-      e.preventDefault();
-      const ids = [...uiState.selectedBlockIds];
-      if (ids.length > 0) {
-        const blocks = ids
-          .map((id) => blockStore.findBlock(id))
-          .filter(Boolean);
-        uiState.clipboard = JSON.parse(JSON.stringify(blocks));
-      }
-    } else if (e.ctrlKey && e.key === "v") {
-      e.preventDefault();
-      if (uiState.clipboard) {
-        const items = Array.isArray(uiState.clipboard)
-          ? uiState.clipboard
-          : [uiState.clipboard];
-        const clones = items.map((item) => {
-          const clone = JSON.parse(JSON.stringify(item));
-          reId(clone);
-          return clone;
-        });
-        blockStore.insertBlocks(clones, null);
-      }
-    } else if (e.ctrlKey && e.key === "d") {
-      e.preventDefault();
-      const ids = [...uiState.selectedBlockIds];
-      if (ids.length > 0) {
-        blockStore.duplicateBlocks(ids);
-      }
+    const triggerAutoSave = debounce(() => {
+        if (uiState.autoSave && dragState.data.phase === "idle") {
+            // Don't sync back to code if blocks just came from the host
+            if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
+            uiState.setSyncStatus("syncing");
+            send({
+                type: "REQUEST_SYNC",
+                payload: { direction: "toCode", blocks: blockStore.blocks },
+            });
+        }
+    }, 200);
+
+    // React to block changes — notify host + auto-save.
+    // Skips when: not yet initialized, or receiving blocks from host.
+    let lastBlocksJson = "";
+    $effect(() => {
+        const json = JSON.stringify(blockStore.blocks);
+        if (json !== lastBlocksJson) {
+            lastBlocksJson = json;
+
+            if (!initialized || receivingFromHost) return;
+
+            // Don't echo blocks back when they just arrived from the host
+            // (reconcileBlocks can mutate IDs, causing the JSON to differ)
+            if (Date.now() - hostUpdateTime < HOST_UPDATE_GRACE_MS) return;
+
+            saveState({ blocks: blockStore.blocks, zoom: uiState.zoomLevel });
+            send({
+                type: "BLOCKS_CHANGED",
+                payload: { blocks: blockStore.blocks },
+            });
+
+            if (uiState.autoSave) {
+                triggerAutoSave();
+            }
+        }
+    });
+
+    // --- Collect all block IDs (for Ctrl+A) ---
+    function collectAllBlockIds(blocks: Block[]): string[] {
+        const ids: string[] = [];
+        for (const b of blocks) {
+            ids.push(b.id);
+            if (b.children) ids.push(...collectAllBlockIds(b.children));
+            if (b.attachments) ids.push(...collectAllBlockIds(b.attachments));
+        }
+        return ids;
     }
-  }
 
-  function reId(block: any) {
-    block.id = generateId();
-    if (block.children) block.children.forEach(reId);
-    if (block.attachments) block.attachments.forEach(reId);
-  }
+    // --- Check if the active element is a text input ---
+    function isTextInput(el: Element | null): boolean {
+        if (!el) return false;
+        const tag = (el as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return true;
+        if ((el as HTMLElement).isContentEditable) return true;
+        return false;
+    }
 
-  // Tell the extension host we're ready
-  send({ type: "READY" });
+    // After undo/redo/delete, Svelte re-renders the block tree and the
+    // browser auto-focuses the first focusable element (the search input).
+    // This forces focus back to the canvas after the DOM settles.
+    function refocusCanvas() {
+        requestAnimationFrame(() => {
+            const canvas = document.querySelector(
+                ".vp-canvas-container",
+            ) as HTMLElement | null;
+            if (canvas) canvas.focus();
+        });
+    }
 
-  function handleGlobalClick(e: MouseEvent) {
-    if (uiState.contextMenu.visible) return; // ContextMenu handles its own close
-    const target = e.target as HTMLElement;
-    if (
-      target.closest(
-        ".vp-block, button, input, textarea, select, .vp-palette-item, .vp-context-menu",
-      )
-    )
-      return;
+    // --- Keyboard shortcuts ---
+    // ALL app-level shortcuts are disabled when focused inside a text field.
+    function onKeyDown(e: KeyboardEvent) {
+        if (isTextInput(e.target as Element)) return;
 
-    uiState.clearSelection();
-  }
+        if (e.ctrlKey && e.key === "z") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            blockStore.undo();
+            refocusCanvas();
+        } else if (e.ctrlKey && e.key === "y") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            blockStore.redo();
+            refocusCanvas();
+        } else if (e.key === "a") {
+            // Bare "a" key to select/deselect all blocks
+            // (Ctrl+A is intercepted by VS Code for text highlight)
+            e.preventDefault();
+            const allIds = collectAllBlockIds(blockStore.blocks);
+            uiState.selectAll(allIds);
+        } else if (e.key === "+" || e.key === "=") {
+            e.preventDefault();
+            uiState.zoomIn();
+        } else if (e.key === "-" || e.key === "_") {
+            e.preventDefault();
+            uiState.zoomOut();
+        } else if (e.key === "0") {
+            e.preventDefault();
+            uiState.resetZoom();
+        } else if (e.key === "Delete") {
+            e.preventDefault();
+            if (uiState.selectedBlockIds.length > 0) {
+                blockStore.removeBlocks([...uiState.selectedBlockIds]);
+                uiState.clearSelection();
+            }
+            refocusCanvas();
+        } else if (e.key === "Escape") {
+            uiState.hideContextMenu();
+            uiState.clearSelection();
+        } else if (e.ctrlKey && e.key === "c") {
+            e.preventDefault();
+            const ids = [...uiState.selectedBlockIds];
+            if (ids.length > 0) {
+                const blocks = ids
+                    .map((id) => blockStore.findBlock(id))
+                    .filter(Boolean);
+                uiState.clipboard = JSON.parse(JSON.stringify(blocks));
+            }
+        } else if (e.ctrlKey && e.key === "v") {
+            e.preventDefault();
+            if (uiState.clipboard) {
+                const items = Array.isArray(uiState.clipboard)
+                    ? uiState.clipboard
+                    : [uiState.clipboard];
+                const clones = items.map((item) => {
+                    const clone = JSON.parse(JSON.stringify(item));
+                    reId(clone);
+                    return clone;
+                });
+                blockStore.insertBlocks(clones, null);
+            }
+        } else if (e.ctrlKey && e.key === "d") {
+            e.preventDefault();
+            const ids = [...uiState.selectedBlockIds];
+            if (ids.length > 0) {
+                blockStore.duplicateBlocks(ids);
+            }
+        }
+    }
+
+    function reId(block: any) {
+        block.id = generateId();
+        if (block.children) block.children.forEach(reId);
+        if (block.attachments) block.attachments.forEach(reId);
+    }
+
+    // Tell the extension host we're ready
+    send({ type: "READY" });
+
+    function handleGlobalClick(e: MouseEvent) {
+        if (uiState.contextMenu.visible) return; // ContextMenu handles its own close
+        const target = e.target as HTMLElement;
+        if (
+            target.closest(
+                ".vp-block, button, input, textarea, select, .vp-palette-item, .vp-context-menu",
+            )
+        )
+            return;
+
+        uiState.clearSelection();
+    }
 </script>
 
 <svelte:document onkeydown={onKeyDown} onclick={handleGlobalClick} />
 
 <div class="vp-app" role="application" aria-label="VisualPy Block Editor">
-  <Toolbar />
-  <div class="vp-main">
-    <Palette />
-    <Canvas />
-  </div>
-  <ContextMenu />
-  <Toast />
+    <Toolbar />
+    <div class="vp-main">
+        <Palette />
+        {#if uiState.paletteCollapsed}
+            <button
+                class="vp-palette-reveal-btn"
+                onclick={() => uiState.togglePalette()}
+                title="Expand Sidebar">&#x203a;&#x203a;</button
+            >
+        {/if}
+        <Canvas />
+    </div>
+    <ContextMenu />
+    <Toast />
 </div>
 
 <style>
-  .vp-app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    opacity: 0;
-    animation: vp-fade-in 300ms ease forwards;
-    animation-delay: 50ms;
-  }
+    .vp-app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        opacity: 0;
+        animation: vp-fade-in 300ms ease forwards;
+        animation-delay: 50ms;
+    }
 
-  .vp-main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-  }
+    .vp-main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .vp-palette-reveal-btn {
+        position: absolute;
+        left: 0;
+        top: 12px;
+        z-index: 100;
+        background: var(--vp-bg);
+        border: 1px solid var(--vp-border);
+        border-left: none;
+        border-radius: 0 4px 4px 0;
+        width: 24px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--vp-fg);
+        font-size: 16px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+        transition: background var(--vp-transition-fast);
+        animation: vp-fade-in 180ms ease;
+    }
+    .vp-palette-reveal-btn:hover {
+        background: var(--vp-hover);
+    }
 </style>

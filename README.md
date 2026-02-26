@@ -4,10 +4,11 @@
 
 **Bidirectional Python ↔ visual block editor for VS Code — convert code to Scratch-like blocks and back, in real time.**
 
+[![CI](https://github.com/visualpy/visualpy/actions/workflows/ci.yml/badge.svg)](https://github.com/visualpy/visualpy/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Svelte](https://img.shields.io/badge/Svelte-5.0-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev/)
 [![VS Code API](https://img.shields.io/badge/VS_Code_API-Extension-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/api)
-[![Node.js](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
 **Built with** Svelte · TypeScript · VS Code Extension API · Node.js
 
@@ -31,7 +32,7 @@ VisualPy is a VS Code extension that renders Python source files as interactive 
 
 ## Compatibility
 
-Works with VS Code 1.70.0+ and any VS Code-based IDE, including Cursor, Windsurf, Google Antigravity, and VSCodium.
+Works with VS Code 1.70.0+ and any VS Code-based IDE, including Cursor, Windsurf, and VSCodium.
 
 ---
 
@@ -126,35 +127,25 @@ All settings are available in VS Code Settings (`Ctrl+,` / `⌘+,`) under the `v
 
 | Layer | Technologies |
 |---|---|
-| Core | TypeScript, Svelte 5 |
-| Extension Host | VS Code Extension API |
-| Build | Node.js, npm |
+| Extension Host | TypeScript, VS Code Extension API, webpack |
+| Webview UI | Svelte 5, TypeScript, Vite |
 | Styling | CSS, VS Code theme tokens |
 
 ---
 
 ## Development
 
-**Prerequisites:** Node.js 16.x+, Git
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
-```bash
-# Clone and install
-git clone https://github.com/visualpy/visualpy.git
-cd visualpy
-npm install
-```
-
-**Run the extension:** Open the project in VS Code and press `F5`. This compiles the project and launches the Extension Development Host.
-
-**Watch mode (hot reload):** Press `Ctrl+Shift+B` / `⌘+Shift+B` and select **Watch All**. Reload the Extension Development Host window (`Ctrl+R` / `⌘+R`) to pick up changes.
+**Quick start:** clone the repo, run `npm install`, then press **F5** in VS Code. The extension compiles and launches automatically in a new Extension Development Host window. Subsequent file changes are compiled in the background — reload the dev host (`Cmd+R` / `Ctrl+R`) to pick them up.
 
 ---
 
 ## Troubleshooting
 
-**`Cannot find module 'dist/extension.js'`** — The extension must be compiled before it can run. Press `F5` to build and launch, or run `npm run dev` manually.
+**`Cannot find module 'dist/extension.js'`** — Press `F5` to compile and launch. If that fails, check the Terminal panel for build errors.
 
-**Black screen on load** — Ensure `npm install` has been run. Check the developer console for errors via Help → Toggle Developer Tools.
+**Black screen on load** — Ensure `npm install` has been run. Inspect errors via Help → Toggle Developer Tools.
 
 ---
 

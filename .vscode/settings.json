@@ -1,0 +1,26 @@
+{
+    // ESLint — validate TS and Svelte files
+    "eslint.validate": [
+        "typescript",
+        "svelte"
+    ],
+    // Format on save
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode"
+    },
+    // Hide build output dirs from the explorer (not from search)
+    "files.exclude": {
+        "out/": true
+    },
+    "search.exclude": {
+        "dist/": true,
+        "out/": true,
+        "node_modules/": true,
+        "webview/node_modules/": true
+    }
+}
