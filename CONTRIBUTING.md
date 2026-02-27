@@ -49,3 +49,9 @@ resources/      # Static assets (icons, example files)
 
 - ESLint is configured — run `npm run lint` before submitting a PR
 - 4-space indentation for TypeScript/Svelte, 2-space for JSON
+
+## QA Checklist
+
+For manual regression and release validation, use:
+
+- [`docs/qa-checklists.md`](docs/qa-checklists.md)

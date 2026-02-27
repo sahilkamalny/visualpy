@@ -136,6 +136,7 @@ All settings are available in VS Code Settings (`Ctrl+,` / `⌘+,`) under the `v
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
+For manual regression and release QA, see [docs/qa-checklists.md](docs/qa-checklists.md).
 
 **Quick start:** clone the repo, run `npm install`, then press **F5** in VS Code. The extension compiles and launches automatically in a new Extension Development Host window. Subsequent file changes are compiled in the background — reload the dev host (`Cmd+R` / `Ctrl+R`) to pick them up.
 

@@ -6,6 +6,7 @@
     import { dragState } from "../lib/stores/dragState.svelte";
     import { getBlockLabel, debounce } from "../lib/utils";
     import { send } from "../lib/bridge";
+    import Self from "./Block.svelte";
 
     interface Props {
         block: Block;
@@ -125,6 +126,10 @@
     aria-expanded={hasChildren ? !isCollapsed : undefined}
     onclick={handleSelect}
     oncontextmenu={handleContextMenu}
+    onkeydown={(e) => {
+        if (e.key === "Enter" || e.key === " ")
+            handleSelect(e as unknown as MouseEvent);
+    }}
 >
     <!-- Left Accent Strip -->
     <div class="vp-accent-strip"></div>
@@ -180,7 +185,7 @@
             <div class="vp-block-children" data-children-of={block.id}>
                 {#if block.children.length > 0}
                     {#each block.children as child (child.id)}
-                        <svelte:self block={child} depth={depth + 1} />
+                        <Self block={child} depth={depth + 1} />
                     {/each}
                 {:else}
                     <div class="vp-block-empty">
@@ -196,7 +201,7 @@
 {#if block.attachments && block.attachments.length > 0 && !isCollapsed}
     <div class="vp-block-attachments">
         {#each block.attachments as attachment (attachment.id)}
-            <svelte:self block={attachment} {depth} />
+            <Self block={attachment} {depth} />
         {/each}
     </div>
 {/if}
@@ -264,7 +269,7 @@
 
     /* Cursor-highlight state: smooth indent to show active block */
     .vp-block.cursor-highlight {
-        transform: translateX(12px);
+        transform: translateX(24px);
         border-color: color-mix(in srgb, var(--block-color) 60%, transparent);
         box-shadow: var(--vp-shadow-md);
         z-index: 1;
@@ -275,11 +280,9 @@
             color-mix(in srgb, var(--block-color) 40%, transparent);
     }
 
-    /* FIX: Ensure transform applies even when selected */
-    /* FIX: Ensure transform applies even when selected */
-    /* FIX: Ensure transform applies even when selected */
+    /* Ensure transform applies even when selected */
     .vp-block.selected.cursor-highlight {
-        transform: translateX(12px);
+        transform: translateX(24px);
         /* Match selected z-index exactly to prevent shadow popping over neighbors */
         z-index: 2;
         /* Use the slightly weaker shadow to match perception */

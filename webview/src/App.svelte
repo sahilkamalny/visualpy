@@ -285,7 +285,7 @@
         const target = e.target as HTMLElement;
         if (
             target.closest(
-                ".vp-block, button, input, textarea, select, .vp-palette-item, .vp-context-menu",
+                ".vp-block, .vp-canvas-container, button, input, textarea, select, .vp-palette-item, .vp-context-menu",
             )
         )
             return;

@@ -157,6 +157,13 @@
                                             item.type,
                                             category.name,
                                         )}
+                                    onkeydown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ")
+                                            handlePaletteItemClick(
+                                                item.type,
+                                                category.name,
+                                            );
+                                    }}
                                 >
                                     <span class="vp-palette-icon"
                                         >{item.icon}</span
@@ -287,6 +294,9 @@
         opacity: 0.7;
         flex: 1;
         margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Collapse button in header */
@@ -395,6 +405,9 @@
     .vp-category-name {
         flex: 1;
         text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .vp-category-chevron {
@@ -473,6 +486,9 @@
         font-size: 12px;
         flex: 1;
         opacity: 0.9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* ============================================

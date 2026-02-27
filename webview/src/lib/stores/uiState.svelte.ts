@@ -2,14 +2,14 @@
  * UI state store — selection, zoom, sync status, etc.
  * Separate from block data to keep concerns clean.
  */
-import type { SyncStatus } from '../types';
+import type { SyncStatus } from "../types";
 
 class UIStateStore {
     // Multi-select: Set of selected block IDs
     selectedBlockIds = $state<string[]>([]);
     zoomLevel = $state(100);
-    syncStatus = $state<SyncStatus>('synced');
-    fileName = $state('No file open');
+    syncStatus = $state<SyncStatus>("synced");
+    fileName = $state("No file open");
     autoSave = $state(true);
     ctrlPressed = $state(false);
     paletteCollapsed = $state(false);
@@ -39,7 +39,9 @@ class UIStateStore {
     toggleBlockSelection(id: string): void {
         const idx = this.selectedBlockIds.indexOf(id);
         if (idx >= 0) {
-            this.selectedBlockIds = this.selectedBlockIds.filter(x => x !== id);
+            this.selectedBlockIds = this.selectedBlockIds.filter(
+                (x) => x !== id,
+            );
         } else {
             this.selectedBlockIds = [...this.selectedBlockIds, id];
         }
@@ -47,7 +49,10 @@ class UIStateStore {
 
     /** Select all blocks or deselect all (toggle) */
     selectAll(allBlockIds: string[]): void {
-        if (this.selectedBlockIds.length === allBlockIds.length && allBlockIds.length > 0) {
+        if (
+            this.selectedBlockIds.length === allBlockIds.length &&
+            allBlockIds.length > 0
+        ) {
             this.selectedBlockIds = [];
         } else {
             this.selectedBlockIds = [...allBlockIds];
@@ -87,7 +92,9 @@ class UIStateStore {
 
     /** Get the first selected block ID (for backwards compat with single-select code) */
     get selectedBlockId(): string | null {
-        return this.selectedBlockIds.length > 0 ? this.selectedBlockIds[0] : null;
+        return this.selectedBlockIds.length > 0
+            ? this.selectedBlockIds[0]
+            : null;
     }
 
     setZoom(level: number): void {
@@ -117,14 +124,18 @@ class UIStateStore {
     toast = $state<{
         visible: boolean;
         message: string;
-        type: 'info' | 'error' | 'success';
-    }>({ visible: false, message: '', type: 'info' });
+        type: "info" | "error" | "success";
+    }>({ visible: false, message: "", type: "info" });
 
-    showToast(message: string, type: 'info' | 'error' | 'success' = 'info'): void {
+    showToast(
+        message: string,
+        type: "info" | "error" | "success" = "info",
+    ): void {
         this.toast = { visible: true, message, type };
         // Auto-hide after 5 seconds
         setTimeout(() => {
-            if (this.toast.message === message) { // Only hide if message hasn't changed
+            if (this.toast.message === message) {
+                // Only hide if message hasn't changed
                 this.toast.visible = false;
             }
         }, 5000);
@@ -136,9 +147,9 @@ class UIStateStore {
 
     setSyncStatus(status: SyncStatus, message?: string): void {
         this.syncStatus = status;
-        if (message && status === 'error') {
-            this.showToast(message, 'error');
-        } else if (status === 'synced') {
+        if (message && status === "error") {
+            this.showToast(message, "error");
+        } else if (status === "synced") {
             this.hideToast();
         }
     }

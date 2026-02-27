@@ -1,17 +1,23 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { PythonParserService } from '../parser/PythonParserService';
-import { astToBlocks } from '../mapper/codeToBlocks';
-import { blocksToCode } from '../mapper/blocksToCode';
-import { Block, Theme, Config, ExtensionMessage, WebviewMessage, SyncStatus } from '../types';
-import { Logger } from '../utils/logger';
-import { getConfig, debounce } from '../utils';
+import * as vscode from "vscode";
+import * as path from "path";
+import { PythonParserService } from "../parser/PythonParserService";
+import { astToBlocks } from "../mapper/codeToBlocks";
+import { blocksToCode } from "../mapper/blocksToCode";
+import {
+    Block,
+    Theme,
+    ExtensionMessage,
+    WebviewMessage,
+    SyncStatus,
+} from "../types";
+import { Logger } from "../utils/logger";
+import { getConfig, debounce } from "../utils";
 
 /**
  * Webview provider for the block editor panel
  */
 export class BlockEditorProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'visualpy.blockCanvas';
+    public static readonly viewType = "visualpy.blockCanvas";
 
     private view?: vscode.WebviewView;
     private panel?: vscode.WebviewPanel;
@@ -19,67 +25,73 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     private parserService: PythonParserService;
     private currentDocument?: vscode.TextDocument;
     private blocks: Block[] = [];
-    private syncStatus: SyncStatus = 'synced';
+    private syncStatus: SyncStatus = "synced";
     private isUpdatingCode = false;
-    private _lastSyncedCode = '';
+    private _lastSyncedCode = "";
     private _lastHighlightedLine: number | null = null;
+    private _inErrorState = false;
     private disposables: vscode.Disposable[] = [];
 
     constructor(
         context: vscode.ExtensionContext,
-        parserService: PythonParserService
+        parserService: PythonParserService,
     ) {
         this.context = context;
         this.parserService = parserService;
 
         // Listen for active editor changes
         this.disposables.push(
-            vscode.window.onDidChangeActiveTextEditor(editor => {
-                if (editor?.document.languageId === 'python') {
+            vscode.window.onDidChangeActiveTextEditor((editor) => {
+                if (editor?.document.languageId === "python") {
                     this.handleDocumentChange(editor.document);
                 }
-            })
+            }),
         );
 
         // Listen for document changes
         this.disposables.push(
-            vscode.workspace.onDidChangeTextDocument(event => {
-                if (this.currentDocument && event.document === this.currentDocument) {
+            vscode.workspace.onDidChangeTextDocument((event) => {
+                if (
+                    this.currentDocument &&
+                    event.document === this.currentDocument
+                ) {
                     this.handleDocumentEdit(event);
                 }
-            })
+            }),
         );
 
         // Listen for document save
         this.disposables.push(
-            vscode.workspace.onDidSaveTextDocument(document => {
+            vscode.workspace.onDidSaveTextDocument((document) => {
                 if (document === this.currentDocument) {
                     this.handleDocumentSave();
                 }
-            })
+            }),
         );
 
         // Listen for configuration changes
         this.disposables.push(
-            vscode.workspace.onDidChangeConfiguration(event => {
-                if (event.affectsConfiguration('visualpy')) {
+            vscode.workspace.onDidChangeConfiguration((event) => {
+                if (event.affectsConfiguration("visualpy")) {
                     this.sendConfigUpdate();
                 }
-            })
+            }),
         );
 
         // Listen for cursor position changes (for cursor-to-block highlight)
         this.disposables.push(
-            vscode.window.onDidChangeTextEditorSelection(event => {
+            vscode.window.onDidChangeTextEditorSelection((event) => {
                 const doc = event.textEditor.document;
-                const isPython = doc.languageId === 'python';
+                const _isPython = doc.languageId === "python";
                 const docMatch = doc === this.currentDocument;
                 const hasPanel = !!(this.panel || this.view);
-                Logger.info(`[CursorHighlight] Selection changed: lang=${doc.languageId}, docMatch=${docMatch}, hasPanel=${hasPanel}, blocksCount=${this.blocks.length}, file=${doc.fileName}`);
+                Logger.info(
+                    `[CursorHighlight] Selection changed: lang=${doc.languageId}, docMatch=${docMatch}, hasPanel=${hasPanel}, blocksCount=${this.blocks.length}, file=${doc.fileName}`,
+                );
                 if (docMatch) {
                     this.handleCursorMove(event.textEditor);
                 }
-            })
+            }),
         );
     }
 
@@ -89,7 +101,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
+        _token: vscode.CancellationToken,
     ): void {
         this.view = webviewView;
         this.setupWebview(webviewView.webview);
@@ -101,8 +113,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     async openPanel(): Promise<void> {
         // Get active Python document
         const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.languageId !== 'python') {
-            vscode.window.showWarningMessage('Please open a Python file first');
+        if (!editor || editor.document.languageId !== "python") {
+            vscode.window.showWarningMessage("Please open a Python file first");
             return;
         }
 
@@ -113,23 +125,33 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             this.panel.reveal(vscode.ViewColumn.Beside);
         } else {
             this.panel = vscode.window.createWebviewPanel(
-                'visualpy.blockEditor',
+                "visualpy.blockEditor",
                 `VisualPy: ${path.basename(editor.document.fileName)}`,
                 vscode.ViewColumn.Beside,
                 {
                     enableScripts: true,
                     retainContextWhenHidden: true,
                     localResourceRoots: [
-                        vscode.Uri.joinPath(this.context.extensionUri, 'dist'),
-                        vscode.Uri.joinPath(this.context.extensionUri, 'webview'),
-                        vscode.Uri.joinPath(this.context.extensionUri, 'resources')
-                    ]
-                }
+                        vscode.Uri.joinPath(this.context.extensionUri, "dist"),
+                        vscode.Uri.joinPath(
+                            this.context.extensionUri,
+                            "webview",
+                        ),
+                        vscode.Uri.joinPath(
+                            this.context.extensionUri,
+                            "resources",
+                        ),
+                    ],
+                },
             );
 
-            this.panel.onDidDispose(() => {
-                this.panel = undefined;
-            }, null, this.disposables);
+            this.panel.onDidDispose(
+                () => {
+                    this.panel = undefined;
+                },
+                null,
+                this.disposables,
+            );
 
             this.setupWebview(this.panel.webview);
         }
@@ -145,10 +167,10 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         webview.options = {
             enableScripts: true,
             localResourceRoots: [
-                vscode.Uri.joinPath(this.context.extensionUri, 'dist'),
-                vscode.Uri.joinPath(this.context.extensionUri, 'webview'),
-                vscode.Uri.joinPath(this.context.extensionUri, 'resources')
-            ]
+                vscode.Uri.joinPath(this.context.extensionUri, "dist"),
+                vscode.Uri.joinPath(this.context.extensionUri, "webview"),
+                vscode.Uri.joinPath(this.context.extensionUri, "resources"),
+            ],
         };
 
         webview.html = this.getWebviewContent(webview);
@@ -157,7 +179,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         webview.onDidReceiveMessage(
             (message: WebviewMessage) => this.handleWebviewMessage(message),
             null,
-            this.disposables
+            this.disposables,
         );
     }
 
@@ -166,15 +188,31 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      */
     private getWebviewContent(webview: vscode.Webview): string {
         const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.js')
+            vscode.Uri.joinPath(
+                this.context.extensionUri,
+                "dist",
+                "webview",
+                "webview.js",
+            ),
         );
 
         const styleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.css')
+            vscode.Uri.joinPath(
+                this.context.extensionUri,
+                "dist",
+                "webview",
+                "webview.css",
+            ),
         );
 
-        const codiconsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css')
+        const _codiconsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(
+                this.context.extensionUri,
+                "node_modules",
+                "@vscode/codicons",
+                "dist",
+                "codicon.css",
+            ),
         );
 
         const nonce = this.getNonce();
@@ -199,54 +237,60 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      * Handle messages from webview
      */
     private async handleWebviewMessage(message: WebviewMessage): Promise<void> {
-        // @ts-ignore - Valid at runtime
+        // @ts-expect-error - Valid at runtime
         Logger.debug(`Webview Message: ${message.type}`, message.payload);
 
         switch (message.type) {
-            case 'READY':
+            case "READY":
                 await this.parseAndSendBlocks();
                 break;
 
-            case 'BLOCKS_CHANGED':
+            case "BLOCKS_CHANGED":
                 this.blocks = message.payload.blocks;
-                this.syncStatus = 'pending';
+                this.syncStatus = "pending";
                 // Realtime sync is disabled by default, waiting for manual sync
-                if (getConfig().syncMode === 'realtime') {
+                if (getConfig().syncMode === "realtime") {
                     this.syncBlocksToCode();
                 }
                 break;
 
-            case 'REQUEST_SYNC':
+            case "REQUEST_SYNC":
                 if (message.payload.blocks) {
                     this.blocks = message.payload.blocks;
                 }
 
-                if (message.payload.direction === 'toCode') {
-                    Logger.info('Manual Sync to Code requested');
+                if (message.payload.direction === "toCode") {
+                    Logger.info("Manual Sync to Code requested");
                     await this.syncBlocksToCode();
                 } else {
-                    Logger.info('Manual Refresh from Code requested');
+                    Logger.info("Manual Refresh from Code requested");
                     await this.parseAndSendBlocks();
                 }
                 break;
 
-            case 'BLOCK_SELECTED':
+            case "BLOCK_SELECTED":
                 if (this.currentDocument && message.payload.sourceRange) {
                     // ... selection logic ...
                 }
                 break;
 
-            case 'LOG': {
+            case "LOG": {
                 const level = message.payload.level;
-                if (level === 'error') Logger.error(message.payload.message);
-                else if (level === 'warn') Logger.warn(message.payload.message);
-                else Logger.info(`[Webview] ${message.payload.message}`);
+                if (level === "error") {
+                    Logger.error(message.payload.message);
+                } else if (level === "warn") {
+                    Logger.warn(message.payload.message);
+                } else {
+                    Logger.info(`[Webview] ${message.payload.message}`);
+                }
                 break;
             }
 
-            case 'ERROR':
+            case "ERROR":
                 Logger.error(`Webview error: ${message.payload.message}`);
-                vscode.window.showErrorMessage(`VisualPy: ${message.payload.message}`);
+                vscode.window.showErrorMessage(
+                    `VisualPy: ${message.payload.message}`,
+                );
                 break;
         }
     }
@@ -265,45 +309,66 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
 
             if (!parseResult.success) {
                 const error = parseResult.errors[0];
-                Logger.warn('Parse failed, sending error toast', error);
+                Logger.warn("Parse failed, sending error toast", error);
+                this._inErrorState = true;
                 this.sendMessage({
-                    type: 'PARSE_ERROR',
+                    type: "PARSE_ERROR",
                     payload: {
-                        errors: [{ message: error.message || 'Syntax error', line: error.lineno || 0 }]
-                    }
+                        errors: [
+                            {
+                                message: error.message || "Syntax error",
+                                line: error.lineno || 0,
+                            },
+                        ],
+                    },
                 });
                 return;
             }
+
+            this._inErrorState = false;
 
             this.blocks = astToBlocks(parseResult);
 
             // Add hash to new blocks
             // this.assignBlockHashes(this.blocks);
-            Logger.info('Sending blocks to webview', { count: this.blocks.length });
+            Logger.info("Sending blocks to webview", {
+                count: this.blocks.length,
+            });
 
             this.sendMessage({
-                type: 'INIT',
+                type: "INIT",
                 payload: {
                     blocks: this.blocks,
                     theme: this.getTheme(),
                     config: getConfig(),
-                    fileName: path.basename(this.currentDocument.fileName)
-                }
+                    fileName: path.basename(this.currentDocument.fileName),
+                },
             });
 
-            this.syncStatus = 'synced';
+            this.syncStatus = "synced";
             this.sendMessage({
-                type: 'SYNC_STATUS',
-                payload: { status: 'synced' }
+                type: "SYNC_STATUS",
+                payload: { status: "synced" },
             });
-        } catch (error: any) {
-            Logger.error('Failed to parse blocks', error);
+        } catch (error: unknown) {
+            Logger.error("Failed to parse blocks", error);
+            this._inErrorState = true;
+            const msg =
+                error instanceof Error
+                    ? error.message
+                    : "Syntax error in Python code";
+            const line = (error as Record<string, unknown>)?.lineNumber;
             // Send error to webview so it can show a toast and KEEP existing blocks
             this.sendMessage({
-                type: 'PARSE_ERROR',
+                type: "PARSE_ERROR",
                 payload: {
-                    errors: [{ message: error.message || 'Syntax error in Python code', line: (error as any).lineNumber || 0 }]
-                }
+                    errors: [
+                        {
+                            message: msg,
+                            line: typeof line === "number" ? line : 0,
+                        },
+                    ],
+                },
             });
         }
     }
@@ -313,12 +378,14 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      */
     async syncBlocksToCode(): Promise<void> {
         if (!this.currentDocument || this.isUpdatingCode) {
-            if (this.isUpdatingCode) Logger.warn('Sync skipped: Already updating code');
+            if (this.isUpdatingCode) {
+                Logger.warn("Sync skipped: Already updating code");
+            }
             return;
         }
 
         this.isUpdatingCode = true;
-        Logger.info('Syncing blocks to code...');
+        Logger.info("Syncing blocks to code...");
 
         try {
             const code = blocksToCode(this.blocks);
@@ -326,7 +393,9 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             const edit = new vscode.WorkspaceEdit();
             const fullRange = new vscode.Range(
                 this.currentDocument.positionAt(0),
-                this.currentDocument.positionAt(this.currentDocument.getText().length)
+                this.currentDocument.positionAt(
+                    this.currentDocument.getText().length,
+                ),
             );
 
             edit.replace(this.currentDocument.uri, fullRange, code);
@@ -334,11 +403,11 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
             const success = await vscode.workspace.applyEdit(edit);
 
             if (success) {
-                Logger.info('Code sync successful');
-                this.syncStatus = 'synced';
+                Logger.info("Code sync successful");
+                this.syncStatus = "synced";
                 this.sendMessage({
-                    type: 'SYNC_STATUS',
-                    payload: { status: 'synced' }
+                    type: "SYNC_STATUS",
+                    payload: { status: "synced" },
                 });
 
                 // Re-parse to capture implicit changes (e.g. `pass` inserted by blocksToCode)
@@ -347,19 +416,19 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
                 // Update hash after re-parse (parseAndSendBlocks doesn't change the document)
                 this._lastSyncedCode = this.currentDocument.getText();
             } else {
-                Logger.error('Code sync failed: applyEdit returned false');
-                this.syncStatus = 'error';
+                Logger.error("Code sync failed: applyEdit returned false");
+                this.syncStatus = "error";
                 this.sendMessage({
-                    type: 'SYNC_STATUS',
-                    payload: { status: 'error', message: 'Sync failed' }
+                    type: "SYNC_STATUS",
+                    payload: { status: "error", message: "Sync failed" },
                 });
             }
         } catch (error) {
-            Logger.error('Failed to sync blocks to code', error);
-            this.syncStatus = 'error';
+            Logger.error("Failed to sync blocks to code", error);
+            this.syncStatus = "error";
             this.sendMessage({
-                type: 'SYNC_STATUS',
-                payload: { status: 'error', message: 'Sync failed' }
+                type: "SYNC_STATUS",
+                payload: { status: "error", message: "Sync failed" },
             });
         } finally {
             setTimeout(() => {
@@ -386,32 +455,46 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     /**
      * Handle document edits
      */
-    private handleDocumentEdit = debounce((event: vscode.TextDocumentChangeEvent) => {
-        // If we are currently updating the code ourselves, ignore this event.
-        if (this.isUpdatingCode) return;
-
-        // Use content hash to determine if this is our own edit or an external one.
-        // This is more robust than flag-based approaches that can swallow external edits.
-        if (this.currentDocument) {
-            const currentNorm = this.currentDocument.getText().replace(/\r\n/g, '\n');
-            const syncedNorm = this._lastSyncedCode.replace(/\r\n/g, '\n');
-            if (currentNorm === syncedNorm) {
-                return; // Our own edit, skip
+    private handleDocumentEdit = debounce(
+        (_event: vscode.TextDocumentChangeEvent) => {
+            // If we are currently updating the code ourselves, ignore this event.
+            if (this.isUpdatingCode) {
+                return;
             }
-        }
 
-        Logger.debug('Document edited externally');
+            // When recovering from a parse error, always re-parse so blocks resync
+            // immediately once the error is fixed (bypasses the content-hash guard).
+            if (!this._inErrorState) {
+                // Use content hash to determine if this is our own edit or an external one.
+                // This is more robust than flag-based approaches that can swallow external edits.
+                if (this.currentDocument) {
+                    const currentNorm = this.currentDocument
+                        .getText()
+                        .replace(/\r\n/g, "\n");
+                    const syncedNorm = this._lastSyncedCode.replace(
+                        /\r\n/g,
+                        "\n",
+                    );
+                    if (currentNorm === syncedNorm) {
+                        return; // Our own edit, skip
+                    }
+                }
+            }
 
-        // Re-parse: user edited the Python file externally
-        this.parseAndSendBlocks();
-    }, 100); // Reduced from 200ms to 100ms for snappier updates
+            Logger.debug("Document edited externally");
+
+            // Re-parse: user edited the Python file externally
+            this.parseAndSendBlocks();
+        },
+        100,
+    ); // Reduced from 200ms to 100ms for snappier updates
 
     /**
      * Handle document save
      */
     private handleDocumentSave(): void {
         const config = getConfig();
-        if (config.syncMode === 'onSave') {
+        if (config.syncMode === "onSave") {
             this.parseAndSendBlocks();
         }
     }
@@ -421,8 +504,8 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      */
     private sendConfigUpdate(): void {
         this.sendMessage({
-            type: 'CONFIG_CHANGED',
-            payload: { config: getConfig() }
+            type: "CONFIG_CHANGED",
+            payload: { config: getConfig() },
         });
     }
 
@@ -442,21 +525,27 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
     private getTheme(): Theme {
         const kind = vscode.window.activeColorTheme.kind;
         if (kind === vscode.ColorThemeKind.Light) {
-            return 'light';
-        } else if (kind === vscode.ColorThemeKind.HighContrast || kind === vscode.ColorThemeKind.HighContrastLight) {
-            return 'high-contrast';
+            return "light";
+        } else if (
+            kind === vscode.ColorThemeKind.HighContrast ||
+            kind === vscode.ColorThemeKind.HighContrastLight
+        ) {
+            return "high-contrast";
         }
-        return 'dark';
+        return "dark";
     }
 
     /**
      * Generate nonce for CSP
      */
     private getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let text = "";
+        const possible =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
+            text += possible.charAt(
+                Math.floor(Math.random() * possible.length),
+            );
         }
         return text;
     }
@@ -470,13 +559,15 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         const cursorLine = editor.selection.active.line + 1;
 
         // Deduplicate: don't send if cursor line hasn't changed
-        if (cursorLine === this._lastHighlightedLine) return;
+        if (cursorLine === this._lastHighlightedLine) {
+            return;
+        }
         this._lastHighlightedLine = cursorLine;
 
         Logger.info(`[CursorHighlight] Sending line: ${cursorLine}`);
         this.sendMessage({
-            type: 'CURSOR_HIGHLIGHT',
-            payload: { line: cursorLine }
+            type: "CURSOR_HIGHLIGHT",
+            payload: { line: cursorLine },
         });
     }, 50);
 
@@ -485,6 +576,6 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
      */
     dispose(): void {
         this.panel?.dispose();
-        this.disposables.forEach(d => d.dispose());
+        this.disposables.forEach((d) => d.dispose());
     }
 }

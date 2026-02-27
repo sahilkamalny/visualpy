@@ -45,7 +45,6 @@
     function handleDuplicate() {
         const ids = getTargetIds();
         if (ids.length === 0) return;
-        if (ids.length === 0) return;
         blockStore.duplicateBlocks(ids);
         uiState.hideContextMenu();
     }
@@ -79,7 +78,11 @@
         class="vp-context-menu"
         style="left: {uiState.contextMenu.x}px; top: {uiState.contextMenu.y}px;"
         role="menu"
+        tabindex="0"
         onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => {
+            if (e.key === "Escape") uiState.hideContextMenu();
+        }}
     >
         <button class="vp-cm-item" role="menuitem" onclick={handleCopy}>
             <span class="vp-cm-icon">📋</span>
