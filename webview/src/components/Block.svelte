@@ -4,14 +4,32 @@
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
     import { dragState } from "../lib/stores/dragState.svelte";
-    import { getBlockLabel, debounce } from "../lib/utils";
+    import { debounce } from "../lib/utils";
     import { send } from "../lib/bridge";
     import Self from "./Block.svelte";
+    import ConditionComposer from "./ConditionComposer.svelte";
+    import InlineField from "./InlineField.svelte";
 
     interface Props {
         block: Block;
         depth?: number;
     }
+
+    const AUG_ASSIGN_OPERATORS = [
+        "+",
+        "-",
+        "*",
+        "/",
+        "//",
+        "%",
+        "**",
+        "<<",
+        ">>",
+        "|",
+        "^",
+        "&",
+        "@",
+    ];
 
     let { block, depth = 0 }: Props = $props();
 
@@ -25,6 +43,10 @@
     const hasChildren = $derived(!!block.children && block.children.length > 0);
     const isCollapsed = $derived(block.metadata?.collapsed ?? false);
     const hasError = $derived(!!block.metadata?.error);
+    const suggestionListId = $derived(`vp-symbol-cache-${block.id}`);
+    const symbolSuggestions = $derived(
+        blockStore.getScopedSymbolSuggestions(block.id),
+    );
 
     function handleSelect(e: MouseEvent) {
         e.stopPropagation();
@@ -71,7 +93,7 @@
     }, 300);
 
     function handleFieldInput(fieldId: string, e: Event) {
-        const target = e.target as HTMLInputElement;
+        const target = e.target as HTMLInputElement | HTMLSelectElement;
         // Quietly mutate the field value without triggering a reactive re-render.
         // This lets the DOM <input> keep its own state during rapid typing.
         blockStore.updateFieldQuiet(block.id, fieldId, target.value);
@@ -86,7 +108,7 @@
 
     function handleFieldFocus(fieldId: string, e: FocusEvent) {
         e.stopPropagation();
-        const target = e.target as HTMLInputElement;
+        const target = e.target as HTMLInputElement | HTMLSelectElement;
         fieldFocusValue = target.value;
         // Mark this field as actively being edited so reconcileBlocks
         // won't overwrite its value during sync roundtrips.
@@ -96,7 +118,7 @@
     }
 
     function handleFieldBlur(e: FocusEvent) {
-        const newVal = (e.target as HTMLInputElement).value;
+        const newVal = (e.target as HTMLInputElement | HTMLSelectElement).value;
         // Clear the active edit guard — reconcileBlocks may now overwrite freely.
         blockStore.activeEditField = null;
         // Immediately flush any pending quiet mutations so the store is up-to-date.
@@ -109,6 +131,20 @@
             // Value unchanged — discard the snapshot we saved on focus
             blockStore.discardSnapshot();
         }
+    }
+
+    function shouldUseConditionComposer(fieldId: string): boolean {
+        return (
+            fieldId === "condition" &&
+            (block.type === "if" ||
+                block.type === "elif" ||
+                block.type === "while" ||
+                block.type === "assert")
+        );
+    }
+
+    function shouldUseOperatorSelect(fieldId: string): boolean {
+        return fieldId === "operator" && block.type === "augAssign";
     }
 </script>
 
@@ -145,18 +181,32 @@
             {#if block.content.editable && block.content.editable.length > 0}
                 <div class="vp-block-fields">
                     {#each block.content.editable as field (field.id)}
-                        <input
-                            type="text"
-                            class="vp-field-input"
-                            value={field.value}
-                            placeholder={field.placeholder || field.label}
-                            title={field.label}
-                            oninput={(e) => handleFieldInput(field.id, e)}
-                            onfocus={(e) => handleFieldFocus(field.id, e)}
-                            onblur={handleFieldBlur}
-                            onkeydown={(e) => e.stopPropagation()}
-                            onclick={(e) => e.stopPropagation()}
-                        />
+                        {#if shouldUseConditionComposer(field.id)}
+                            <ConditionComposer
+                                blockId={block.id}
+                                fieldId={field.id}
+                                value={field.value}
+                                suggestionListId={suggestionListId}
+                            />
+                        {:else}
+                            <InlineField
+                                value={field.value}
+                                label={field.label}
+                                placeholder={field.placeholder}
+                                mode={shouldUseOperatorSelect(field.id)
+                                    ? "select"
+                                    : "input"}
+                                options={shouldUseOperatorSelect(field.id)
+                                    ? AUG_ASSIGN_OPERATORS
+                                    : undefined}
+                                suggestionListId={shouldUseOperatorSelect(field.id)
+                                    ? undefined
+                                    : suggestionListId}
+                                onInput={(e) => handleFieldInput(field.id, e)}
+                                onFocus={(e) => handleFieldFocus(field.id, e)}
+                                onBlur={handleFieldBlur}
+                            />
+                        {/if}
                     {/each}
                 </div>
             {/if}
@@ -205,6 +255,12 @@
         {/each}
     </div>
 {/if}
+
+<datalist id={suggestionListId}>
+    {#each symbolSuggestions as symbol (symbol)}
+        <option value={symbol}></option>
+    {/each}
+</datalist>
 
 <style>
     .vp-block {
@@ -370,32 +426,7 @@
         flex: 1;
         min-width: 0;
         margin-left: 4px;
-    }
-
-    .vp-field-input {
-        flex: 1;
-        min-width: 60px;
-        padding: 4px 8px;
-        font-family: var(--vp-code);
-        font-size: 12px;
-        background: var(--vp-input-bg);
-        color: var(--vp-input-fg);
-        border: 1px solid transparent;
-        border-radius: var(--vp-radius-sm);
-        transition:
-            border-color var(--vp-transition-fast),
-            background var(--vp-transition-fast);
-    }
-    .vp-field-input:hover {
-        border-color: var(--vp-input-border);
-    }
-    .vp-field-input:focus {
-        background: var(--vp-input-bg);
-        border-color: var(--vp-focus);
-        box-shadow: 0 0 0 1px var(--vp-focus);
-    }
-    .vp-field-input::placeholder {
-        opacity: 0.4;
+        flex-wrap: wrap;
     }
 
     /* Collapse toggle */
@@ -464,5 +495,40 @@
     .vp-block-attachments {
         /* No margin/padding tweak needed if we treat them as siblings */
         margin-top: 2px;
+    }
+
+    @media (max-width: 980px) {
+        .vp-block-header {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            row-gap: 6px;
+            min-height: 0;
+        }
+
+        .vp-block-fields {
+            order: 10;
+            flex: 1 0 100%;
+            margin-left: 0;
+            padding-left: 22px;
+        }
+
+        .vp-collapse-btn {
+            order: 8;
+            margin-left: auto;
+        }
+
+        .vp-block-error {
+            order: 9;
+            margin-left: 0;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .vp-block,
+        .vp-block-header,
+        .vp-block-fields {
+            transition: none;
+            animation: none;
+        }
     }
 </style>

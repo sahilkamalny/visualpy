@@ -129,7 +129,8 @@
     "watch:webview": "npm run dev --prefix webview",
     "dev": "npm run build:webview && webpack --mode development",
     "lint": "eslint src",
-    "test": "npm run build:webview && node ./out/test/runTest.js",
+    "test": "npm run build:webview && npx tsc -p . && node ./out/src/test/runTest.js",
+    "test:unit": "npx tsc -p . && npx mocha --ui tdd ./out/src/test/suite/**/*.test.js",
     "package": "vsce package",
     "build:webview": "npm run build --prefix webview",
     "postinstall": "npm install --prefix webview"

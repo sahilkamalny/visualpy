@@ -99,6 +99,57 @@ Run these checks after changes to UI state, drag/drop, selection, keyboard handl
 - [ ] Edit Python source and confirm block tree reconciles without selection corruption.
 - [ ] Rapid edits do not cause stale or reverted field values after debounce flush.
 
+### Condition Composer and Reconcile Stress (Focused)
+
+Use this section after changes to condition editing UX, scoped symbol suggestions, or `reconcileBlocks`.
+
+- [ ] Prepare a fixture file with at least one `if`, one `while`, and one `assert` containing non-trivial conditions.
+- [ ] Ensure each condition is visible as a condition-composer row in blocks.
+
+Recommended fixture:
+
+```python
+def check(nums, threshold):
+    total = sum(nums)
+    flag = total > threshold
+    if (total > 0 and flag) or threshold == 0:
+        while total > 1 and flag:
+            total = total - 1
+    assert ((total >= 0) and flag) or (threshold == 0), "invalid state"
+    return total
+```
+
+Composer interaction checks:
+
+- [ ] Hover a condition row and confirm `+` and `-` controls appear only on hover/focus.
+- [ ] Click `+` repeatedly and confirm each click appends exactly one operator/value pair.
+- [ ] Click `-` repeatedly and confirm each click removes exactly one trailing operator/value pair (never below one value slot).
+- [ ] Hover an operator cell and confirm dropdown affordance appears; selecting a new operator updates code correctly.
+- [ ] Shift-click two different value slots and confirm one parenthesis pair is added around the selected range.
+- [ ] Repeat Shift-click on the same two slots and confirm one parenthesis pair is removed (stack/unstack one level at a time).
+- [ ] Confirm normal click (without Shift) does not toggle parentheses and does not trigger block selection side effects.
+
+Ghost-input and field hover checks:
+
+- [ ] For non-condition fields (assignment/function/import/etc.), confirm text appears as baked-in label when idle.
+- [ ] Confirm only the hovered/focused field reveals editable input chrome (no global input reveal).
+- [ ] While editing one field, confirm adjacent fields remain in display mode.
+
+Scoped symbol suggestion checks:
+
+- [ ] In a nested block, open suggestions and confirm nearest lexical symbols appear before global symbols.
+- [ ] Define a new local variable in the same scope and confirm it appears in later sibling suggestions.
+- [ ] Confirm free-form text still works when suggestion is not selected.
+
+Reconcile stress checks (rapid source edits while typing in webview):
+
+- [ ] Start typing in a condition value slot and keep cursor active in that field.
+- [ ] In the text editor, insert/remove lines above the same block and save to trigger reparse.
+- [ ] Confirm active field text is not clobbered, focus stays in the same logical field, and typing can continue.
+- [ ] Repeat with neighboring same-type blocks (e.g., multiple adjacent `if`/`while`) and confirm identity does not jump between blocks.
+- [ ] Repeat with attachments (`elif`/`else`, `except`/`finally`) and confirm collapse state and edited value remain stable.
+- [ ] Verify final generated Python matches the last visible block state after the debounce window.
+
 ### Undo/Redo Integrity
 
 - [ ] Make 3-5 structural edits (insert/move/delete).

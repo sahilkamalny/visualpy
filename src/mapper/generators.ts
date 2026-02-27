@@ -151,7 +151,7 @@ export function blockToCode(block: Block, level: number, indent: string): string
             lines.push(`${prefix}${block.content.raw}`);
     }
 
-    return lines;
+    return applyBlockComments(block, lines, prefix);
 }
 
 /**
@@ -418,6 +418,26 @@ function generateComment(block: Block, prefix: string): string[] {
 function generateExpression(block: Block, prefix: string): string[] {
     const expr = getFieldValue(block, 'expression') || block.content.raw;
     return [`${prefix}${expr}`];
+}
+
+function applyBlockComments(block: Block, lines: string[], prefix: string): string[] {
+    const comments = block.metadata?.comments || [];
+    if (comments.length === 0) return lines;
+
+    const output = [...lines];
+    const standalone = comments.filter(comment => !comment.inline);
+    const inline = comments.filter(comment => comment.inline).map(comment => comment.text.trim()).filter(Boolean);
+
+    if (inline.length > 0 && output.length > 0) {
+        output[0] = `${output[0]}  # ${inline.join(' | ')}`;
+    }
+
+    if (standalone.length === 0) {
+        return output;
+    }
+
+    const prefixComments = standalone.map(comment => `${prefix}# ${comment.text}`);
+    return [...prefixComments, ...output];
 }
 
 // Helper to get field value

@@ -42,7 +42,7 @@ export function getBlockLabel(block: { type: string; content: { editable: Array<
         case 'import': return 'import ' + field('modules');
         case 'fromImport': return 'from ' + field('module') + ' import ' + field('names');
         case 'assign': return field('targets') + ' = ' + field('value');
-        case 'augAssign': return field('targets') + ' ' + field('op') + ' ' + field('value');
+        case 'augAssign': return field('target') + ' ' + field('operator') + ' ' + field('value');
         case 'function': return 'def ' + field('name') + '(' + field('params') + ')';
         case 'class': return 'class ' + field('name');
         case 'if': return 'if ' + field('condition');
