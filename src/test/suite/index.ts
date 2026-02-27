@@ -12,13 +12,11 @@ export function run(): Promise<void> {
 
     const testsRoot = path.resolve(__dirname, '.');
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            const files = await glob('**/**.test.js', { cwd: testsRoot });
+    return glob('**/**.test.js', { cwd: testsRoot }).then((files: string[]) => {
+        // Add files to the test suite
+        files.forEach((f: string) => mocha.addFile(path.resolve(testsRoot, f)));
 
-            // Add files to the test suite
-            files.forEach((f: string) => mocha.addFile(path.resolve(testsRoot, f)));
-
+        return new Promise<void>((resolve, reject) => {
             // Run the mocha test
             mocha.run((failures: number) => {
                 if (failures > 0) {
@@ -27,9 +25,6 @@ export function run(): Promise<void> {
                     resolve();
                 }
             });
-        } catch (err) {
-            console.error(err);
-            reject(err);
-        }
+        });
     });
 }

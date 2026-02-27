@@ -11,24 +11,11 @@ const DEFAULT_CONFIG: Config = {
     palettePosition: 'left',
 };
 
-function getRuntimeConfig(): Config {
-    try {
-        // Lazy require keeps unit tests independent from the VS Code host module.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const configModule = require('../utils/config') as {
-            getConfig: () => Config;
-        };
-        return configModule.getConfig();
-    } catch {
-        return DEFAULT_CONFIG;
-    }
-}
-
 /**
  * Convert block tree back to Python code
  */
 export function blocksToCode(blocks: Block[], config?: Partial<Config>): string {
-    const settings = { ...getRuntimeConfig(), ...config };
+    const settings = { ...DEFAULT_CONFIG, ...config };
     const indent = settings.indentStyle === 'tabs'
         ? '\t'
         : ' '.repeat(settings.indentSize);

@@ -388,7 +388,7 @@ export class BlockEditorProvider implements vscode.WebviewViewProvider {
         Logger.info("Syncing blocks to code...");
 
         try {
-            const code = blocksToCode(this.blocks);
+            const code = blocksToCode(this.blocks, getConfig());
             this._lastSyncedCode = code;
             const edit = new vscode.WorkspaceEdit();
             const fullRange = new vscode.Range(
