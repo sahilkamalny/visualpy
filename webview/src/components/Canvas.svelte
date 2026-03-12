@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
     import Block from "./Block.svelte";
+    import { BLOCK_COLORS } from "../lib/types";
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
     import { dragState } from "../lib/stores/dragState.svelte";
@@ -237,10 +238,12 @@
     >
         {#if blockStore.blocks.length > 0}
             {#each blockStore.blocks as block, blockIndex (block.id)}
+                {@const topLevelColors = BLOCK_COLORS[block.category] || BLOCK_COLORS.misc}
                 {#if blockIndex > 0}
-                    <div class="vp-flow-link vp-flow-link--linear">
-                        <span class="vp-flow-link-label">next</span>
-                    </div>
+                    <div
+                        class="vp-flow-link vp-flow-link--linear vp-flow-link--canvas"
+                        style="--flow-link-color: {topLevelColors.primary};"
+                    ></div>
                 {/if}
                 <Block {block} />
             {/each}

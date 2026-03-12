@@ -30,6 +30,7 @@
         "&",
         "@",
     ];
+    const MAX_FLOW_LABEL_LENGTH = 44;
 
     let { block, depth = 0 }: Props = $props();
 
@@ -171,21 +172,21 @@
             case "for": {
                 const target = getEditableValue(source, "target");
                 const iterable = getEditableValue(source, "iterable");
-                if (target && iterable) return `${target} in ${iterable}`;
+                if (target && iterable) return `for ${target} in ${iterable}`;
                 return "for each";
             }
             case "try":
-                return "try";
+                return "enter try";
             case "except": {
                 const type =
                     getEditableValue(source, "type") ||
                     getEditableValue(source, "exception");
-                return type ? `except ${type}` : "except";
+                return type ? `on ${type}` : "on exception";
             }
             case "else":
-                return "else";
+                return "otherwise";
             case "finally":
-                return "finally";
+                return "always";
             default:
                 return null;
         }
@@ -195,8 +196,8 @@
         if (source.type === "while") {
             const condition = getEditableValue(source, "condition");
             return condition
-                ? `loop while ${condition}`
-                : "loop while true";
+                ? `repeat while ${condition}`
+                : "repeat while true";
         }
         if (source.type === "for") {
             const target = getEditableValue(source, "target");
@@ -207,28 +208,36 @@
 
     function getChildConnectorLabel(source: Block, index: number): string {
         if (source.type === "for" || source.type === "while") {
-            return index === 1 ? "next iteration" : "next";
+            return index === 1 ? "loop body" : "next step";
         }
-        return "next";
+        return index === 1 ? "then" : "next step";
     }
 
     function getAttachmentConnectorLabel(attachment: Block): string {
         if (attachment.type === "elif") {
             const condition = getEditableValue(attachment, "condition");
-            return condition ? `elif ${condition}` : "elif";
+            return condition ? `else if ${condition}` : "else if";
         }
         if (attachment.type === "except") {
             const type =
                 getEditableValue(attachment, "type") ||
                 getEditableValue(attachment, "exception");
             const name = getEditableValue(attachment, "name");
-            if (type && name) return `except ${type} as ${name}`;
-            if (type) return `except ${type}`;
-            return "except";
+            if (type && name) return `on ${type} as ${name}`;
+            if (type) return `on ${type}`;
+            return "on exception";
         }
-        if (attachment.type === "finally") return "finally";
-        if (attachment.type === "else") return "else";
+        if (attachment.type === "finally") return "always";
+        if (attachment.type === "else") return "otherwise";
         return attachment.type;
+    }
+
+    function formatFlowLabel(raw: string | null): string | null {
+        if (!raw) return null;
+        const compact = raw.replace(/\s+/g, " ").trim();
+        if (!compact) return null;
+        if (compact.length <= MAX_FLOW_LABEL_LENGTH) return compact;
+        return `${compact.slice(0, MAX_FLOW_LABEL_LENGTH - 1).trimEnd()}…`;
     }
 </script>
 
@@ -337,37 +346,48 @@
         {#if block.children !== undefined && !isCollapsed}
             <div class="vp-block-children" data-children-of={block.id}>
                 {#if block.children.length > 0}
-                    {@const entryLabel = getEntryConnectorLabel(block)}
+                    {@const entryRaw = getEntryConnectorLabel(block)}
+                    {@const entryLabel = formatFlowLabel(entryRaw)}
                     {#if entryLabel}
                         <div
                             class="vp-flow-link vp-flow-link--entry"
                             style="--flow-link-color: {colors.primary};"
                         >
-                            <span class="vp-flow-link-label">{entryLabel}</span>
+                            <span class="vp-flow-link-label" title={entryRaw}
+                                >{entryLabel}</span
+                            >
                         </div>
                     {/if}
 
                     {#each block.children as child, childIndex (child.id)}
                         {#if childIndex > 0}
+                            {@const childLabelRaw = getChildConnectorLabel(
+                                block,
+                                childIndex,
+                            )}
                             <div
                                 class="vp-flow-link vp-flow-link--linear"
                                 style="--flow-link-color: {colors.primary};"
                             >
-                                <span class="vp-flow-link-label">
-                                    {getChildConnectorLabel(block, childIndex)}
+                                <span
+                                    class="vp-flow-link-label"
+                                    title={childLabelRaw}
+                                >
+                                    {formatFlowLabel(childLabelRaw)}
                                 </span>
                             </div>
                         {/if}
                         <Self block={child} depth={depth + 1} />
                     {/each}
 
-                    {@const loopBackLabel = getLoopBackLabel(block)}
+                    {@const loopBackRaw = getLoopBackLabel(block)}
+                    {@const loopBackLabel = formatFlowLabel(loopBackRaw)}
                     {#if loopBackLabel}
                         <div
                             class="vp-flow-link vp-flow-link--loopback"
                             style="--flow-link-color: {colors.primary};"
                         >
-                            <span class="vp-flow-link-label">
+                            <span class="vp-flow-link-label" title={loopBackRaw}>
                                 {loopBackLabel}
                             </span>
                         </div>
@@ -386,12 +406,15 @@
 {#if block.attachments && block.attachments.length > 0 && !isCollapsed}
     <div class="vp-block-attachments">
         {#each block.attachments as attachment (attachment.id)}
+            {@const attachmentLabelRaw = getAttachmentConnectorLabel(
+                attachment,
+            )}
             <div
                 class="vp-flow-link vp-flow-link--branch"
                 style="--flow-link-color: {colors.primary};"
             >
-                <span class="vp-flow-link-label">
-                    {getAttachmentConnectorLabel(attachment)}
+                <span class="vp-flow-link-label" title={attachmentLabelRaw}>
+                    {formatFlowLabel(attachmentLabelRaw)}
                 </span>
             </div>
             <Self block={attachment} {depth} />
@@ -743,6 +766,18 @@
         .vp-block-error {
             order: 9;
             margin-left: 0;
+        }
+
+        .vp-block-children {
+            padding-left: 12px;
+        }
+
+        .vp-block-children::before {
+            left: 5px;
+        }
+
+        .vp-block-attachments {
+            padding-left: 8px;
         }
     }
 

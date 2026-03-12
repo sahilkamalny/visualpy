@@ -182,7 +182,8 @@ body {
     );
     position: relative;
     height: 16px;
-    margin: 2px 0 2px 18px;
+    margin: 4px 0 4px 18px;
+    pointer-events: none;
 }
 
 .vp-flow-link::before {
@@ -190,32 +191,38 @@ body {
     position: absolute;
     left: 0;
     top: 0;
-    bottom: 5px;
-    border-left: 2px solid var(--flow-link-color);
+    bottom: 6px;
+    border-left: 1.5px solid var(--flow-link-color);
+    opacity: 0.9;
 }
 
 .vp-flow-link::after {
     content: "";
     position: absolute;
-    left: -3px;
-    bottom: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 6px solid var(--flow-link-color);
+    left: -2.5px;
+    bottom: 1px;
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 5px solid var(--flow-link-color);
+    opacity: 0.9;
 }
 
 .vp-flow-link-label {
     position: absolute;
     left: 10px;
-    top: -1px;
+    top: -2px;
     font-size: 10px;
     line-height: 1;
     color: color-mix(in srgb, var(--flow-link-color) 80%, var(--vp-fg));
-    background: color-mix(in srgb, var(--flow-link-color) 12%, var(--vp-bg));
+    background: color-mix(in srgb, var(--flow-link-color) 14%, var(--vp-bg));
     border: 1px solid color-mix(in srgb, var(--flow-link-color) 28%, transparent);
     border-radius: 999px;
-    padding: 2px 6px;
+    padding: 2px 7px;
     white-space: nowrap;
+    max-width: min(60ch, calc(100% - 18px));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .vp-flow-link--entry {
@@ -224,18 +231,84 @@ body {
 
 .vp-flow-link--entry::before {
     border-left-style: dashed;
+    border-left-width: 2px;
 }
 
 .vp-flow-link--branch::before {
     border-left-style: dashed;
+    border-left-width: 2px;
 }
 
 .vp-flow-link--loopback {
-    margin-top: 6px;
+    margin-top: 8px;
+}
+
+.vp-flow-link--loopback::before {
+    border-left-style: double;
+    border-left-width: 3px;
 }
 
 .vp-flow-link--loopback .vp-flow-link-label::before {
     content: "↺ ";
+}
+
+.vp-flow-link--canvas {
+    margin-left: 10px;
+    height: 12px;
+}
+
+.vp-flow-link--canvas::before {
+    bottom: 4px;
+}
+
+.vp-flow-link--canvas::after {
+    bottom: -1px;
+}
+
+@media (max-width: 980px) {
+    .vp-flow-link {
+        margin: 3px 0 3px 12px;
+        height: 14px;
+    }
+
+    .vp-flow-link::before {
+        bottom: 5px;
+    }
+
+    .vp-flow-link::after {
+        left: -2px;
+        border-left-width: 3px;
+        border-right-width: 3px;
+        border-top-width: 4px;
+    }
+
+    .vp-flow-link-label {
+        left: 9px;
+        top: -2px;
+        font-size: 9px;
+        padding: 2px 5px;
+        max-width: min(44ch, calc(100% - 16px));
+    }
+
+    .vp-flow-link--canvas {
+        margin-left: 6px;
+        height: 10px;
+    }
+}
+
+@media (max-width: 760px) {
+    .vp-flow-link {
+        margin-left: 8px;
+    }
+
+    .vp-flow-link-label {
+        max-width: min(28ch, calc(100% - 12px));
+    }
+
+    /* Linear connectors are repetitive on narrow layouts — keep arrows, hide text. */
+    .vp-flow-link--linear .vp-flow-link-label {
+        display: none;
+    }
 }
 
 /* === Utility Classes === */
