@@ -22,22 +22,20 @@ export function astToBlocks(parseResult: ParseResult): Block[] {
         commentsByLine.get(comment.line)!.push(comment);
     }
 
-    // Process each body statement
-    blocks.push(...processBodyWithComments(module.body, commentsByLine, 0));
+    // Process each body statement and keep standalone trailing comments at EOF.
+    blocks.push(...processBodyWithComments(module.body, commentsByLine, 0, true));
 
     return blocks;
 }
 
 /**
- * Process a list of body nodes and insert comments where appropriate
- */
-/**
- * Process a list of body nodes and insert comments where appropriate
+ * Process a list of body nodes and insert comments where appropriate.
  */
 function processBodyWithComments(
     nodes: ASTNode[],
     commentsByLine: Map<number, CommentInfo[]>,
-    initialStartLine?: number
+    initialStartLine?: number,
+    includeTrailingStandaloneComments = false
 ): Block[] {
     const blocks: Block[] = [];
 
@@ -77,15 +75,9 @@ function processBodyWithComments(
         lastEndLine = Math.max(lastEndLine, node.end_lineno || nodeLine);
     }
 
-    // If this is the top-level (initialStartLine undefined) or explicit request, 
-    // and we have remaining comments (e.g. file ends with comments, or file is ONLY comments),
-    // we should try to include them.
-    // Since we don't know the exact end of file here, we can heuristically check 
-    // if there are more comments in the map greater than lastEndLine.
-    // However, for nested blocks, grabbing "everything after" is dangerous as it might belong to outer scope.
-    // But for the CASE where nodes is empty (e.g. empty file with comments), we MUST process them.
-    if (nodes.length === 0 && initialStartLine === undefined) {
-        // Scan all comments since we have no nodes to bound them
+    if (includeTrailingStandaloneComments) {
+        // Add remaining standalone comments after the last node.
+        // This must only run at top-level to avoid swallowing outer-scope comments.
         const sortedLines = Array.from(commentsByLine.keys()).sort((a, b) => a - b);
         for (const line of sortedLines) {
             if (line > lastEndLine) {

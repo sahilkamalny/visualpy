@@ -252,6 +252,8 @@
     class:flow-exception={flowRole === "exception"}
     class:flow-terminal={flowRole === "terminal"}
     class:flow-annotation={flowRole === "annotation"}
+    class:flow-data={flowRole === "data"}
+    class:flow-merge={flowRole === "merge"}
     data-block-id={block.id}
     data-block-type={block.type}
     data-flow-role={flowRole}
@@ -285,6 +287,8 @@
                 class:exception={flowRole === "exception"}
                 class:terminal={flowRole === "terminal"}
                 class:annotation={flowRole === "annotation"}
+                class:data={flowRole === "data"}
+                class:merge={flowRole === "merge"}
                 aria-hidden="true"
             ></span>
             <span class="vp-block-type">{block.type}</span>
@@ -515,6 +519,16 @@
         background: color-mix(in srgb, var(--block-color) 4%, var(--vp-bg));
     }
 
+    .vp-block.flow-data .vp-block-type {
+        border-style: double;
+    }
+
+    .vp-block.flow-merge .vp-block-type {
+        border-radius: 2px;
+        clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+        padding: 2px 10px 3px;
+    }
+
     /* Cursor-highlight state: smooth indent to show active block */
     .vp-block.cursor-highlight {
         transform: translateX(24px);
@@ -649,6 +663,14 @@
     }
     .vp-flow-glyph.annotation {
         clip-path: polygon(0 0, 88% 0, 100% 100%, 12% 100%);
+    }
+    .vp-flow-glyph.data {
+        clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+        border-radius: 0;
+    }
+    .vp-flow-glyph.merge {
+        clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+        border-radius: 1px;
     }
 
     .vp-block-type {

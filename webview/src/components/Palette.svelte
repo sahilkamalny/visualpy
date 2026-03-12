@@ -158,6 +158,8 @@
                                     class:flow-exception={role === "exception"}
                                     class:flow-terminal={role === "terminal"}
                                     class:flow-annotation={role === "annotation"}
+                                    class:flow-data={role === "data"}
+                                    class:flow-merge={role === "merge"}
                                     draggable="false"
                                     data-block-id={`palette-${item.type}`}
                                     data-palette-type={item.type}
@@ -193,6 +195,8 @@
                                         class:exception={role === "exception"}
                                         class:terminal={role === "terminal"}
                                         class:annotation={role === "annotation"}
+                                        class:data={role === "data"}
+                                        class:merge={role === "merge"}
                                         aria-hidden="true"
                                     ></span>
                                     <span class="vp-palette-label"
@@ -565,6 +569,14 @@
     .vp-palette-shape.annotation {
         clip-path: polygon(0 0, 88% 0, 100% 100%, 12% 100%);
     }
+    .vp-palette-shape.data {
+        clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+        border-radius: 0;
+    }
+    .vp-palette-shape.merge {
+        clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+        border-radius: 1px;
+    }
 
     .vp-palette-item.flow-decision {
         border-style: dashed;
@@ -580,6 +592,10 @@
 
     .vp-palette-item.flow-exception {
         border-style: dashed;
+    }
+
+    .vp-palette-item.flow-data {
+        border-style: double;
     }
 
     /* ============================================

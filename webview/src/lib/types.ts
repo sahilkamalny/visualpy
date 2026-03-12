@@ -78,7 +78,9 @@ export type FlowRole =
     | 'loop'
     | 'exception'
     | 'terminal'
-    | 'annotation';
+    | 'annotation'
+    | 'data'
+    | 'merge';
 
 // Extension → Webview
 export type ExtensionMessage =
@@ -128,11 +130,11 @@ export const BLOCK_ICONS: Record<BlockType, string> = {
 };
 
 export const BLOCK_FLOW_ROLES: Record<BlockType, FlowRole> = {
-    import: 'process',
-    fromImport: 'process',
-    assign: 'process',
-    augAssign: 'process',
-    annotatedAssign: 'process',
+    import: 'data',
+    fromImport: 'data',
+    assign: 'data',
+    augAssign: 'data',
+    annotatedAssign: 'data',
     function: 'process',
     asyncFunction: 'process',
     return: 'terminal',
@@ -140,14 +142,14 @@ export const BLOCK_FLOW_ROLES: Record<BlockType, FlowRole> = {
     class: 'process',
     if: 'decision',
     elif: 'decision',
-    else: 'decision',
+    else: 'merge',
     for: 'loop',
     while: 'loop',
-    break: 'loop',
-    continue: 'loop',
-    try: 'exception',
+    break: 'terminal',
+    continue: 'terminal',
+    try: 'process',
     except: 'exception',
-    finally: 'exception',
+    finally: 'merge',
     raise: 'exception',
     with: 'process',
     assert: 'decision',
