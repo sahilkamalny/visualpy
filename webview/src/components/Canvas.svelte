@@ -236,7 +236,12 @@
         style="transform: {zoomTransform}; transform-origin: top left;"
     >
         {#if blockStore.blocks.length > 0}
-            {#each blockStore.blocks as block (block.id)}
+            {#each blockStore.blocks as block, blockIndex (block.id)}
+                {#if blockIndex > 0}
+                    <div class="vp-flow-link vp-flow-link--linear">
+                        <span class="vp-flow-link-label">next</span>
+                    </div>
+                {/if}
                 <Block {block} />
             {/each}
         {:else}

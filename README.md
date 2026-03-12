@@ -110,6 +110,7 @@ All settings are available in VS Code Settings (`Ctrl+,` / `⌘+,`) under the `v
 | `visualpy.indentStyle` | `spaces` | `spaces` or `tabs` |
 | `visualpy.defaultZoom` | `100` | Initial canvas zoom level (50–200) |
 | `visualpy.showMinimap` | `true` | Show minimap overview on the canvas |
+| `visualpy.showBlockIcons` | `false` | Show emoji icons in block headers and block palette |
 | `visualpy.palettePosition` | `left` | Block palette position: `left`, `right`, or `hidden` |
 | `visualpy.pythonPath` | *(auto)* | Override path to Python executable |
 

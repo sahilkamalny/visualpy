@@ -2,7 +2,10 @@
     import {
         PALETTE_CATEGORIES,
         BLOCK_COLORS,
+        BLOCK_FLOW_ROLES,
         type BlockCategory,
+        type BlockType,
+        type FlowRole,
     } from "../lib/types";
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
@@ -53,6 +56,10 @@
             category as any,
         );
         blockStore.insertBlock(newBlock, uiState.selectedBlockId);
+    }
+
+    function getFlowRole(type: string): FlowRole {
+        return BLOCK_FLOW_ROLES[type as BlockType] || "process";
     }
 
     // --- Resize handle (VS Code "sash" pattern) ---
@@ -142,12 +149,20 @@
                     {#if expandedCategories.has(category.name)}
                         <div class="vp-palette-items">
                             {#each category.items as item (item.type)}
+                                {@const role = getFlowRole(item.type)}
                                 <div
                                     class="vp-palette-item"
+                                    class:flow-process={role === "process"}
+                                    class:flow-decision={role === "decision"}
+                                    class:flow-loop={role === "loop"}
+                                    class:flow-exception={role === "exception"}
+                                    class:flow-terminal={role === "terminal"}
+                                    class:flow-annotation={role === "annotation"}
                                     draggable="false"
                                     data-block-id={`palette-${item.type}`}
                                     data-palette-type={item.type}
                                     data-palette-category={category.name}
+                                    data-flow-role={role}
                                     style="--block-color: {colors.primary}; --block-accent: {colors.accent};"
                                     role="button"
                                     tabindex="0"
@@ -165,9 +180,21 @@
                                             );
                                     }}
                                 >
-                                    <span class="vp-palette-icon"
-                                        >{item.icon}</span
-                                    >
+                                    {#if uiState.showBlockIcons}
+                                        <span class="vp-palette-icon"
+                                            >{item.icon}</span
+                                        >
+                                    {/if}
+                                    <span
+                                        class="vp-palette-shape"
+                                        class:process={role === "process"}
+                                        class:decision={role === "decision"}
+                                        class:loop={role === "loop"}
+                                        class:exception={role === "exception"}
+                                        class:terminal={role === "terminal"}
+                                        class:annotation={role === "annotation"}
+                                        aria-hidden="true"
+                                    ></span>
                                     <span class="vp-palette-label"
                                         >{item.name}</span
                                     >
@@ -435,9 +462,10 @@
         padding: 6px 10px;
         border-radius: var(--vp-radius-sm);
         cursor: grab;
-        border: 1px solid transparent;
+        border: 1px solid
+            color-mix(in srgb, var(--block-color) 30%, transparent);
         transition: all var(--vp-transition-fast);
-        background: transparent;
+        background: color-mix(in srgb, var(--block-color) 11%, transparent);
         font-size: 12px;
         user-select: none;
         -webkit-user-select: none;
@@ -452,17 +480,19 @@
         left: 0;
         top: 0;
         bottom: 0;
-        width: 3px;
+        width: 4px;
         background: var(--block-color);
-        opacity: 0;
+        opacity: 0.6;
         transition: opacity var(--vp-transition-fast);
     }
 
     .vp-palette-item:hover {
-        background: var(--vp-hover);
-    }
-    .vp-palette-item:hover::before {
-        opacity: 1;
+        background: color-mix(
+            in srgb,
+            var(--block-color) 17%,
+            var(--vp-hover)
+        );
+        border-color: color-mix(in srgb, var(--block-color) 65%, transparent);
     }
 
     .vp-palette-item:active {
@@ -485,10 +515,71 @@
     .vp-palette-label {
         font-size: 12px;
         flex: 1;
-        opacity: 0.9;
+        color: color-mix(in srgb, var(--block-color) 50%, var(--vp-fg));
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .vp-palette-shape {
+        width: 10px;
+        height: 10px;
+        border: 1.5px solid
+            color-mix(in srgb, var(--block-color) 78%, var(--vp-border));
+        background: color-mix(in srgb, var(--block-color) 20%, transparent);
+        border-radius: 2px;
+        flex-shrink: 0;
+        opacity: 0.92;
+    }
+    .vp-palette-shape.process {
+        border-radius: 2px;
+    }
+    .vp-palette-shape.decision {
+        transform: rotate(45deg);
+        border-radius: 1px;
+    }
+    .vp-palette-shape.loop {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: inset 0 0 0 1.5px
+            color-mix(in srgb, var(--block-accent) 86%, transparent);
+    }
+    .vp-palette-shape.exception {
+        clip-path: polygon(
+            30% 0,
+            70% 0,
+            100% 30%,
+            100% 70%,
+            70% 100%,
+            30% 100%,
+            0 70%,
+            0 30%
+        );
+    }
+    .vp-palette-shape.terminal {
+        width: 13px;
+        border-radius: 999px;
+    }
+    .vp-palette-shape.annotation {
+        clip-path: polygon(0 0, 88% 0, 100% 100%, 12% 100%);
+    }
+
+    .vp-palette-item.flow-decision {
+        border-style: dashed;
+    }
+
+    .vp-palette-item.flow-loop::before {
+        background: repeating-linear-gradient(
+            180deg,
+            var(--block-color) 0 3px,
+            color-mix(in srgb, var(--block-accent) 88%, transparent) 3px 6px
+        );
+    }
+
+    .vp-palette-item.flow-exception {
+        border-style: dashed;
     }
 
     /* ============================================

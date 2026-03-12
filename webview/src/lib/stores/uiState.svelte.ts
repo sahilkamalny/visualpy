@@ -15,6 +15,7 @@ class UIStateStore {
     paletteCollapsed = $state(false);
     paletteWidth = $state(160);
     isResizingPalette = $state(false);
+    showBlockIcons = $state(false);
 
     // Cursor-to-block highlight: purely visual, separate from selection
     cursorHighlightId = $state<string | null>(null);
@@ -161,6 +162,10 @@ class UIStateStore {
 
     setFileName(name: string): void {
         this.fileName = name;
+    }
+
+    setShowBlockIcons(show: boolean): void {
+        this.showBlockIcons = show;
     }
 }
 

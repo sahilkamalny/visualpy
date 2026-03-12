@@ -13,6 +13,7 @@ export function getConfig(): Config {
         indentStyle: config.get<'spaces' | 'tabs'>('indentStyle', 'spaces'),
         defaultZoom: config.get<number>('defaultZoom', 100),
         showMinimap: config.get<boolean>('showMinimap', true),
+        showBlockIcons: config.get<boolean>('showBlockIcons', false),
         palettePosition: config.get<'left' | 'right' | 'hidden'>('palettePosition', 'left')
     };
 }
@@ -61,5 +62,4 @@ export async function getPythonPath(): Promise<string> {
     // If spawn fails, PythonParserService handles it.
     return process.platform === 'win32' ? 'python' : 'python3';
 }
-
 

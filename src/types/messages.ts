@@ -12,6 +12,7 @@ export interface Config {
     indentStyle: 'spaces' | 'tabs';
     defaultZoom: number;
     showMinimap: boolean;
+    showBlockIcons: boolean;
     palettePosition: 'left' | 'right' | 'hidden';
 }
 

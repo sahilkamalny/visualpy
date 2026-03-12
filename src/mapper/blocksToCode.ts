@@ -8,6 +8,7 @@ const DEFAULT_CONFIG: Config = {
     indentStyle: 'spaces',
     defaultZoom: 100,
     showMinimap: true,
+    showBlockIcons: false,
     palettePosition: 'left',
 };
 

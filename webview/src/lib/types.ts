@@ -68,8 +68,17 @@ export interface Config {
     indentStyle: 'spaces' | 'tabs';
     defaultZoom: number;
     showMinimap: boolean;
+    showBlockIcons: boolean;
     palettePosition: 'left' | 'right' | 'hidden';
 }
+
+export type FlowRole =
+    | 'process'
+    | 'decision'
+    | 'loop'
+    | 'exception'
+    | 'terminal'
+    | 'annotation';
 
 // Extension → Webview
 export type ExtensionMessage =
@@ -116,6 +125,36 @@ export const BLOCK_ICONS: Record<BlockType, string> = {
     with: '🔐',
     assert: '✅', pass: '⏩',
     comment: '💬', expression: '📊', error: '❌',
+};
+
+export const BLOCK_FLOW_ROLES: Record<BlockType, FlowRole> = {
+    import: 'process',
+    fromImport: 'process',
+    assign: 'process',
+    augAssign: 'process',
+    annotatedAssign: 'process',
+    function: 'process',
+    asyncFunction: 'process',
+    return: 'terminal',
+    yield: 'terminal',
+    class: 'process',
+    if: 'decision',
+    elif: 'decision',
+    else: 'decision',
+    for: 'loop',
+    while: 'loop',
+    break: 'loop',
+    continue: 'loop',
+    try: 'exception',
+    except: 'exception',
+    finally: 'exception',
+    raise: 'exception',
+    with: 'process',
+    assert: 'decision',
+    pass: 'terminal',
+    comment: 'annotation',
+    expression: 'process',
+    error: 'exception',
 };
 
 export interface PaletteCategory {

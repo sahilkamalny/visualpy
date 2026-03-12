@@ -173,6 +173,71 @@ body {
     animation: vp-pulse 1.2s ease-in-out infinite;
 }
 
+/* === Flow Connectors === */
+.vp-flow-link {
+    --flow-link-color: color-mix(
+        in srgb,
+        var(--vp-focus, #3b82f6) 30%,
+        var(--vp-border)
+    );
+    position: relative;
+    height: 16px;
+    margin: 2px 0 2px 18px;
+}
+
+.vp-flow-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 5px;
+    border-left: 2px solid var(--flow-link-color);
+}
+
+.vp-flow-link::after {
+    content: "";
+    position: absolute;
+    left: -3px;
+    bottom: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid var(--flow-link-color);
+}
+
+.vp-flow-link-label {
+    position: absolute;
+    left: 10px;
+    top: -1px;
+    font-size: 10px;
+    line-height: 1;
+    color: color-mix(in srgb, var(--flow-link-color) 80%, var(--vp-fg));
+    background: color-mix(in srgb, var(--flow-link-color) 12%, var(--vp-bg));
+    border: 1px solid color-mix(in srgb, var(--flow-link-color) 28%, transparent);
+    border-radius: 999px;
+    padding: 2px 6px;
+    white-space: nowrap;
+}
+
+.vp-flow-link--entry {
+    height: 18px;
+}
+
+.vp-flow-link--entry::before {
+    border-left-style: dashed;
+}
+
+.vp-flow-link--branch::before {
+    border-left-style: dashed;
+}
+
+.vp-flow-link--loopback {
+    margin-top: 6px;
+}
+
+.vp-flow-link--loopback .vp-flow-link-label::before {
+    content: "↺ ";
+}
+
 /* === Utility Classes === */
 .vp-visually-hidden {
     position: absolute;

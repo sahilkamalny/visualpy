@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Block } from "../lib/types";
-    import { BLOCK_COLORS, BLOCK_ICONS } from "../lib/types";
+    import { BLOCK_COLORS, BLOCK_FLOW_ROLES, BLOCK_ICONS } from "../lib/types";
     import { blockStore } from "../lib/stores/blockStore.svelte";
     import { uiState } from "../lib/stores/uiState.svelte";
     import { dragState } from "../lib/stores/dragState.svelte";
@@ -34,7 +34,9 @@
     let { block, depth = 0 }: Props = $props();
 
     const colors = $derived(BLOCK_COLORS[block.category] || BLOCK_COLORS.misc);
+    const flowRole = $derived(BLOCK_FLOW_ROLES[block.type] || "process");
     const icon = $derived(BLOCK_ICONS[block.type] || "📦");
+    const showBlockIcons = $derived(uiState.showBlockIcons);
     const isSelected = $derived(uiState.selectedBlockIds.includes(block.id));
     const isCursorHighlighted = $derived(
         uiState.cursorHighlightId === block.id,
@@ -146,6 +148,88 @@
     function shouldUseOperatorSelect(fieldId: string): boolean {
         return fieldId === "operator" && block.type === "augAssign";
     }
+
+    function getEditableValue(source: Block, fieldId: string): string {
+        return (
+            source.content.editable
+                ?.find((field) => field.id === fieldId)
+                ?.value?.trim() || ""
+        );
+    }
+
+    function getEntryConnectorLabel(source: Block): string | null {
+        switch (source.type) {
+            case "if":
+            case "elif": {
+                const condition = getEditableValue(source, "condition");
+                return condition ? `if ${condition}` : "if true";
+            }
+            case "while": {
+                const condition = getEditableValue(source, "condition");
+                return condition ? `while ${condition}` : "while true";
+            }
+            case "for": {
+                const target = getEditableValue(source, "target");
+                const iterable = getEditableValue(source, "iterable");
+                if (target && iterable) return `${target} in ${iterable}`;
+                return "for each";
+            }
+            case "try":
+                return "try";
+            case "except": {
+                const type =
+                    getEditableValue(source, "type") ||
+                    getEditableValue(source, "exception");
+                return type ? `except ${type}` : "except";
+            }
+            case "else":
+                return "else";
+            case "finally":
+                return "finally";
+            default:
+                return null;
+        }
+    }
+
+    function getLoopBackLabel(source: Block): string | null {
+        if (source.type === "while") {
+            const condition = getEditableValue(source, "condition");
+            return condition
+                ? `loop while ${condition}`
+                : "loop while true";
+        }
+        if (source.type === "for") {
+            const target = getEditableValue(source, "target");
+            return target ? `next ${target}` : "next iteration";
+        }
+        return null;
+    }
+
+    function getChildConnectorLabel(source: Block, index: number): string {
+        if (source.type === "for" || source.type === "while") {
+            return index === 1 ? "next iteration" : "next";
+        }
+        return "next";
+    }
+
+    function getAttachmentConnectorLabel(attachment: Block): string {
+        if (attachment.type === "elif") {
+            const condition = getEditableValue(attachment, "condition");
+            return condition ? `elif ${condition}` : "elif";
+        }
+        if (attachment.type === "except") {
+            const type =
+                getEditableValue(attachment, "type") ||
+                getEditableValue(attachment, "exception");
+            const name = getEditableValue(attachment, "name");
+            if (type && name) return `except ${type} as ${name}`;
+            if (type) return `except ${type}`;
+            return "except";
+        }
+        if (attachment.type === "finally") return "finally";
+        if (attachment.type === "else") return "else";
+        return attachment.type;
+    }
 </script>
 
 <div
@@ -153,8 +237,15 @@
     class:selected={isSelected}
     class:cursor-highlight={isCursorHighlighted}
     class:has-error={hasError}
+    class:flow-process={flowRole === "process"}
+    class:flow-decision={flowRole === "decision"}
+    class:flow-loop={flowRole === "loop"}
+    class:flow-exception={flowRole === "exception"}
+    class:flow-terminal={flowRole === "terminal"}
+    class:flow-annotation={flowRole === "annotation"}
     data-block-id={block.id}
     data-block-type={block.type}
+    data-flow-role={flowRole}
     style="--block-color: {colors.primary}; --block-accent: {colors.accent}; --depth: {depth};"
     role="treeitem"
     tabindex="0"
@@ -174,7 +265,19 @@
         <!-- Block Header (drag handle) -->
         <div class="vp-block-header">
             <div class="vp-block-grip" title="Drag to reorder">⋮⋮</div>
-            <span class="vp-block-icon">{icon}</span>
+            {#if showBlockIcons}
+                <span class="vp-block-icon">{icon}</span>
+            {/if}
+            <span
+                class="vp-flow-glyph"
+                class:process={flowRole === "process"}
+                class:decision={flowRole === "decision"}
+                class:loop={flowRole === "loop"}
+                class:exception={flowRole === "exception"}
+                class:terminal={flowRole === "terminal"}
+                class:annotation={flowRole === "annotation"}
+                aria-hidden="true"
+            ></span>
             <span class="vp-block-type">{block.type}</span>
 
             <!-- Editable fields inline in header (for simple blocks) -->
@@ -234,9 +337,41 @@
         {#if block.children !== undefined && !isCollapsed}
             <div class="vp-block-children" data-children-of={block.id}>
                 {#if block.children.length > 0}
-                    {#each block.children as child (child.id)}
+                    {@const entryLabel = getEntryConnectorLabel(block)}
+                    {#if entryLabel}
+                        <div
+                            class="vp-flow-link vp-flow-link--entry"
+                            style="--flow-link-color: {colors.primary};"
+                        >
+                            <span class="vp-flow-link-label">{entryLabel}</span>
+                        </div>
+                    {/if}
+
+                    {#each block.children as child, childIndex (child.id)}
+                        {#if childIndex > 0}
+                            <div
+                                class="vp-flow-link vp-flow-link--linear"
+                                style="--flow-link-color: {colors.primary};"
+                            >
+                                <span class="vp-flow-link-label">
+                                    {getChildConnectorLabel(block, childIndex)}
+                                </span>
+                            </div>
+                        {/if}
                         <Self block={child} depth={depth + 1} />
                     {/each}
+
+                    {@const loopBackLabel = getLoopBackLabel(block)}
+                    {#if loopBackLabel}
+                        <div
+                            class="vp-flow-link vp-flow-link--loopback"
+                            style="--flow-link-color: {colors.primary};"
+                        >
+                            <span class="vp-flow-link-label">
+                                {loopBackLabel}
+                            </span>
+                        </div>
+                    {/if}
                 {:else}
                     <div class="vp-block-empty">
                         <span class="vp-empty-text">Drop blocks here</span>
@@ -251,6 +386,14 @@
 {#if block.attachments && block.attachments.length > 0 && !isCollapsed}
     <div class="vp-block-attachments">
         {#each block.attachments as attachment (attachment.id)}
+            <div
+                class="vp-flow-link vp-flow-link--branch"
+                style="--flow-link-color: {colors.primary};"
+            >
+                <span class="vp-flow-link-label">
+                    {getAttachmentConnectorLabel(attachment)}
+                </span>
+            </div>
             <Self block={attachment} {depth} />
         {/each}
     </div>
@@ -267,8 +410,9 @@
         display: flex; /* Flex to hold accent strip and content side-by-side */
         position: relative;
         border-radius: var(--vp-radius);
-        background: var(--vp-bg); /* Use solid background for cleanliness */
-        border: 1px solid var(--vp-border);
+        background: color-mix(in srgb, var(--block-color) 7%, var(--vp-bg));
+        border: 1px solid
+            color-mix(in srgb, var(--block-color) 24%, var(--vp-border));
         box-shadow: var(--vp-shadow-sm);
         margin: 4px 0;
         transition:
@@ -284,9 +428,7 @@
     }
 
     .vp-block:not(.selected):hover {
-        border-color: var(
-            --block-color
-        ); /* Subtle hover highlight matching block color */
+        border-color: var(--block-color);
         box-shadow: var(--vp-shadow-md);
         z-index: 1; /* Slight lift */
     }
@@ -305,7 +447,7 @@
 
     /* Selected state: Wider accent strip */
     .vp-block.selected > .vp-accent-strip {
-        width: 6px;
+        width: 8px;
         box-shadow: 0 0 8px var(--block-color);
     }
 
@@ -321,6 +463,33 @@
     .vp-block.has-error {
         border-color: #ef4444;
         background: color-mix(in srgb, #ef4444 5%, var(--vp-bg));
+    }
+
+    .vp-block.flow-decision .vp-block-type {
+        border-radius: 2px;
+        clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%);
+        padding: 2px 10px;
+    }
+
+    .vp-block.flow-loop > .vp-accent-strip {
+        background: repeating-linear-gradient(
+            180deg,
+            var(--block-color) 0 4px,
+            color-mix(in srgb, var(--block-accent) 88%, transparent) 4px 7px
+        );
+    }
+
+    .vp-block.flow-exception {
+        border-style: dashed;
+    }
+
+    .vp-block.flow-terminal .vp-block-type {
+        padding: 2px 10px;
+        letter-spacing: 0.35px;
+    }
+
+    .vp-block.flow-annotation {
+        background: color-mix(in srgb, var(--block-color) 4%, var(--vp-bg));
     }
 
     /* Cursor-highlight state: smooth indent to show active block */
@@ -353,7 +522,7 @@
 
     /* Accent Strip */
     .vp-accent-strip {
-        width: 4px;
+        width: 6px;
         background: var(--block-color);
         flex-shrink: 0;
         transition: width var(--vp-transition-fast);
@@ -378,6 +547,11 @@
         user-select: none;
         -webkit-user-select: none;
         border-bottom: 1px solid transparent; /* Reserve space for border */
+        background: linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--block-color) 13%, transparent) 0%,
+            transparent 72%
+        );
     }
     .vp-block-header:active {
         cursor: grabbing;
@@ -409,13 +583,62 @@
         opacity: 0.9;
     }
 
+    .vp-flow-glyph {
+        width: 11px;
+        height: 11px;
+        border: 1.5px solid
+            color-mix(in srgb, var(--block-color) 78%, var(--vp-border));
+        background: color-mix(in srgb, var(--block-color) 20%, transparent);
+        border-radius: 2px;
+        flex-shrink: 0;
+        opacity: 0.95;
+    }
+    .vp-flow-glyph.process {
+        border-radius: 2px;
+    }
+    .vp-flow-glyph.decision {
+        transform: rotate(45deg);
+        border-radius: 1px;
+    }
+    .vp-flow-glyph.loop {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: inset 0 0 0 1.5px
+            color-mix(in srgb, var(--block-accent) 86%, transparent);
+    }
+    .vp-flow-glyph.exception {
+        clip-path: polygon(
+            30% 0,
+            70% 0,
+            100% 30%,
+            100% 70%,
+            70% 100%,
+            30% 100%,
+            0 70%,
+            0 30%
+        );
+    }
+    .vp-flow-glyph.terminal {
+        width: 14px;
+        border-radius: 999px;
+    }
+    .vp-flow-glyph.annotation {
+        clip-path: polygon(0 0, 88% 0, 100% 100%, 12% 100%);
+    }
+
     .vp-block-type {
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        color: var(--vp-fg);
-        opacity: 0.8;
+        color: color-mix(in srgb, var(--block-color) 72%, var(--vp-fg));
+        background: color-mix(in srgb, var(--block-color) 20%, transparent);
+        border: 1px solid
+            color-mix(in srgb, var(--block-color) 40%, var(--vp-border));
+        border-radius: 999px;
+        padding: 2px 7px;
     }
 
     /* Editable fields */
@@ -493,8 +716,8 @@
 
     /* Attachments */
     .vp-block-attachments {
-        /* No margin/padding tweak needed if we treat them as siblings */
-        margin-top: 2px;
+        margin-top: 4px;
+        padding-left: 12px;
     }
 
     @media (max-width: 980px) {

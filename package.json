@@ -103,6 +103,11 @@
           "default": true,
           "description": "Show minimap in the block canvas"
         },
+        "visualpy.showBlockIcons": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show emoji icons in block headers and the block palette"
+        },
         "visualpy.palettePosition": {
           "type": "string",
           "default": "left",

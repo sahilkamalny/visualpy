@@ -70,6 +70,9 @@
                     } else {
                         blockStore.reconcileBlocks(message.payload.blocks);
                     }
+                    uiState.setShowBlockIcons(
+                        message.payload.config?.showBlockIcons ?? false,
+                    );
                     uiState.setFileName(message.payload.fileName);
                     hostUpdateTime = Date.now();
                     break;
@@ -87,6 +90,17 @@
                         message.payload.status,
                         message.payload.message,
                     );
+                    break;
+
+                case "CONFIG_CHANGED":
+                    if (
+                        typeof message.payload.config?.showBlockIcons ===
+                        "boolean"
+                    ) {
+                        uiState.setShowBlockIcons(
+                            message.payload.config.showBlockIcons,
+                        );
+                    }
                     break;
 
                 case "PARSE_ERROR": {
