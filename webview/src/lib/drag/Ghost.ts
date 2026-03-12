@@ -41,7 +41,6 @@ export function showGhost(sourceEls: HTMLElement[], width: number): void {
 
         clone.style.margin = '0 0 4px 0'; // Add small gap between stacked blocks
         clone.style.boxShadow = '0 12px 40px rgba(0,0,0,0.35)';
-        clone.style.borderRadius = '10px';
         clone.classList.remove('selected');
         clone.classList.add('ghost-clone');
         g.appendChild(clone);

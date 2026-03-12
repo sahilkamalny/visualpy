@@ -183,7 +183,7 @@
         opacity: 0.4;
     }
 
-    @media (hover: none), (max-width: 760px) {
+    @media (hover: none), (pointer: coarse) {
         .vp-inline-field .vp-field-input,
         .vp-inline-field .vp-field-select {
             opacity: 1;
